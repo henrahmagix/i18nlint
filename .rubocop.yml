@@ -7,3 +7,10 @@ Style/StringLiterals:
 
 Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
+
+Style/FormatStringToken:
+  Enabled: false # i18n has lots of false-positive %{name} placeholders
+
+Metrics/BlockLength:
+  Exclude:
+    - spec/**/*
