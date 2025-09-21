@@ -11,15 +11,15 @@ RSpec.describe I18n::Lint::RuleTypes::RegexpRule do
 
   it "works on individual segments only for now" do
     rule = I18n::Lint::Registry.register_rule(/./)
-    file = I18n::Lint::Linter::File.new
+    file = I18n::Lint::File.new
 
-    expect { rule.on_segment(I18n::Lint::Linter::Segment.new(file:, text: "1")) }
+    expect { rule.on_segment(I18n::Lint::Segment.new(file:, text: "1")) }
       .to change { rule.take_offences.size }
       .to(1)
 
     expect do
-      rule.on_segment_comparison(I18n::Lint::Linter::Segment.new(file:, text: "2"),
-                                 I18n::Lint::Linter::Segment.new(file:, text: "3"))
+      rule.on_segment_comparison(I18n::Lint::Segment.new(file:, text: "2"),
+                                 I18n::Lint::Segment.new(file:, text: "3"))
       rule.on_file(file)
     end.not_to(change { rule.take_offences.size })
   end

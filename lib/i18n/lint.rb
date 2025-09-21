@@ -5,7 +5,7 @@ require_relative "lint/linter"
 require_relative "lint/registry"
 require_relative "lint/rule_type"
 require_relative "lint/rule"
-require_relative "lint/offence"
+require_relative "lint/enumerator"
 
 module I18n
   # Detect various "offences" in your I18n files.

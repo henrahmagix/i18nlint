@@ -2,6 +2,9 @@
 
 module I18n
   module Lint
+    # A registered offence as reported by a rule.
+    Offence = Struct.new(:rule, :filepath, :lineno, :locale, :key, :source, :message)
+
     # Base class for Class rule types.
     class Rule
       attr_reader :config
@@ -13,9 +16,9 @@ module I18n
 
       def add_offence(item, message = nil)
         case item
-        when Linter::File
+        when File
           file_offence(item, message)
-        when Linter::Segment
+        when Segment
           segment_offence(item, message)
         else
           raise ArgumentError, "inapplicable offence type #{item.class}: #{item}"
