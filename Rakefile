@@ -13,4 +13,8 @@ require "rubocop/rake_task"
 
 RuboCop::RakeTask.new
 
-task default: %i[spec rubocop]
+task :exe do
+  system "exe/i18n-lint", "--source=en", "--config=spec/examples/exe/config.yml", "spec/examples/exe/locales/*.yml"
+end
+
+task default: %i[spec exe rubocop]

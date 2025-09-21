@@ -14,6 +14,14 @@ module I18n
         @source_locale = source_locale
       end
 
+      def num_files
+        @enum.num_files
+      end
+
+      def tick_each_file(&block)
+        @tick_each_file = block
+      end
+
       def run
         each_segment { |segment| run_segment(segment) }
         each_segment_comparison do |segment, source_segment|
@@ -44,8 +52,11 @@ module I18n
         end
       end
 
-      def each_file(&)
-        @enum.each_file(&)
+      def each_file
+        @enum.each_file do |file|
+          @tick_each_file&.call
+          yield file
+        end
       end
 
       private

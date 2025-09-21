@@ -25,6 +25,10 @@ module I18n
         @segments_by_filepath = Hash.new { |h, filepath| h[filepath] = [] }
       end
 
+      def num_files
+        @read_files_by_filepath.size
+      end
+
       def each_file(&)
         enum = ::Enumerator.new do |yielder|
           @read_files_by_filepath.each do |filepath, yaml|
