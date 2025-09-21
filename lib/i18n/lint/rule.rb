@@ -30,7 +30,7 @@ module I18n
           config,
           file.filepath,
           nil, # line
-          file.parsed.keys,
+          nil, # locale
           nil, # key
           file.yaml,
           make_message(message)

@@ -44,7 +44,7 @@ RSpec.describe I18n::Lint::Enumerator do
     end
 
     it "only parses what's needed" do
-      calls = capture_method_calls(YAML, :safe_load)
+      calls = capture_method_calls(I18n::Lint::YamlWithLines, :parse)
       instance = described_class.new(examples_dir.join("enumerator/*.yml"), source_locale: "en")
 
       expect { instance.each_file.take(2) }

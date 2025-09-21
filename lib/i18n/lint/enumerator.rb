@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require "yaml"
 require_relative "cloneable_struct"
+require_relative "yaml_with_lines"
 
 module I18n
   module Lint
@@ -37,8 +37,8 @@ module I18n
       def each_segment(&)
         enum = ::Enumerator.new do |yielder|
           each_file do |file|
-            walk_file(file) do |locale, full_key, text|
-              segment = Segment.new(file:, lineno: "TODO", key: full_key, text:, locale:, source_locale:)
+            walk_file(file) do |locale, full_key, text, lineno, _line_end|
+              segment = Segment.new(file:, lineno:, key: full_key, text:, locale:, source_locale:)
               yielder << segment
             end
           end
@@ -66,16 +66,14 @@ module I18n
       end
 
       def parse_yaml(yaml, filepath:)
-        parsed = YAML.safe_load(yaml, filename: filepath, freeze: true)
+        parsed = YamlWithLines.parse(yaml)
         File.new(filepath:, parsed:, yaml:)
       end
 
       def walk_file(file)
-        file.parsed.each do |locale, values|
-          values.each do |key, val|
-            walk_segments(key, val) do |full_key, text|
-              yield locale, full_key, text
-            end
+        file.parsed.each do |doc|
+          YamlWithLines.walk(doc) do |(locale, *key_parts), text, line_start, line_end|
+            yield locale, key_parts.join("."), text, line_start, line_end
           end
         end
       end
