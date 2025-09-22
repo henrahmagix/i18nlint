@@ -42,11 +42,14 @@ RSpec.describe I18n::Lint::RuleTypes::ClassRule do
     it "raises an error, since it'll never get run because method detection happens at registration" do
       expect do
         I18n::Lint::Registry.register_rule(
-          Class.new(I18n::Lint::Rule) { def to_s = "#<TestClassRule inspect=mocked>" }
+          Class.new(I18n::Lint::Rule) do
+            def self.name = "TestClassRule"
+            def self.to_s = name
+          end
         )
       end.to raise_error(
         described_class::WillNeverRun,
-        /ClassRule #<TestClassRule inspect=mocked> will never be used/
+        /ClassRule TestClassRule will never be used/
       )
     end
   end

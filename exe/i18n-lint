@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-require_relative "../lib/i18n/lint/cli"
+require "i18n/lint/cli"
 I18n::Lint::CLI.run

@@ -7,9 +7,16 @@ module I18n
 
     # Base class for Class rule types.
     class Rule
-      attr_reader :config
+      attr_reader :input, :config
 
-      def initialize(config)
+      def self.enabled_by_default? = @enable_by_default == true
+
+      def self.enable_by_default(bool)
+        @enable_by_default = bool
+      end
+
+      def initialize(input, config = {})
+        @input = input
         @config = config
         @offences = []
       end
@@ -17,29 +24,29 @@ module I18n
       def add_offence(item, message = nil)
         case item
         when File
-          file_offence(item, message)
+          add_file_offence(item, message)
         when Segment
-          segment_offence(item, message)
+          add_segment_offence(item, message)
         else
           raise ArgumentError, "inapplicable offence type #{item.class}: #{item}"
-        end.then { |offence| @offences << offence if offence }
+        end
       end
 
-      def file_offence(file, message)
-        Offence.new(
-          config,
+      def add_file_offence(file, message = nil, lineno: nil, locale: nil, source: nil)
+        @offences << Offence.new(
+          input,
           file.filepath,
-          nil, # line
-          nil, # locale
+          lineno, # line
+          locale, # locale
           nil, # key
-          file.yaml,
+          source, # don't print the whole file contents in the offence
           make_message(message)
         )
       end
 
-      def segment_offence(segment, message)
-        Offence.new(
-          config,
+      def add_segment_offence(segment, message)
+        @offences << Offence.new(
+          input,
           segment.filepath,
           segment.lineno,
           segment.locale,
@@ -58,7 +65,8 @@ module I18n
       private
 
       def make_message(message)
-        message ||= config.description if config.respond_to?(:description)
+        message ||= config["Message"]
+        message ||= input.description if input.respond_to?(:description)
         message
       end
     end

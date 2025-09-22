@@ -7,7 +7,7 @@ module I18n
       class ProcRule < RuleType
         TYPE = Proc
 
-        def proc = rule.config
+        def proc = rule.input
 
         def on_segment(segment)
           return unless proc.call(segment.locale, segment.key, segment.text)

@@ -1,0 +1,7 @@
+# NOTE: this is allowed.
+# It is a block comment that is allowed.
+
+# This is not allowed.
+# It is a block comment that is not allowed.
+
+# This single line is not allowed.

@@ -23,9 +23,9 @@ module I18n
           rule_types[type] = rule_type
         end
 
-        def register_rule(rule)
+        def register_rule(rule, config = {})
           if (rule_type = rule_types[rule.class])
-            rule = rule_type.new(rule)
+            rule = rule_type.new(rule, config)
             rules << rule
             rule
           else

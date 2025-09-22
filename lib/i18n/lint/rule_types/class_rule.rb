@@ -7,10 +7,10 @@ module I18n
       class ClassRule < RuleType
         TYPE = Class
 
-        def instance = rule.config
+        def instance = @instance ||= rule.input.new(rule.input, rule.config)
 
-        def initialize(klass)
-          super(klass.new(klass))
+        def initialize(...)
+          super
           delegate!
         end
 
@@ -25,7 +25,7 @@ module I18n
         # Avoid custom rules that will never get used.
         class WillNeverRun < StandardError
           def initialize(instance)
-            super("ClassRule #{instance} will never be used: it must respond to one of #{LINT_METHODS}")
+            super("ClassRule #{instance.class} will never be used: it must respond to one of #{LINT_METHODS}")
           end
         end
 

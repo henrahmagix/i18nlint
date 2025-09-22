@@ -7,7 +7,7 @@ module I18n
       class RegexpRule < RuleType
         TYPE = Regexp
 
-        def regexp = rule.config
+        def regexp = rule.input
 
         def on_segment(segment)
           return unless segment.text.match?(regexp)

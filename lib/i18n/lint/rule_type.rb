@@ -8,8 +8,8 @@ module I18n
     class RuleType
       attr_reader :rule
 
-      def initialize(config)
-        @rule = Rule.new(config)
+      def initialize(object, config = {})
+        @rule = Rule.new(object, config)
       end
 
       def take_offences = rule.take_offences

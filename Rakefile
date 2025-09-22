@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "English"
 require "bundler/gem_tasks"
 require "rspec/core/rake_task"
 
@@ -14,7 +15,8 @@ require "rubocop/rake_task"
 RuboCop::RakeTask.new
 
 task :exe do
-  system "exe/i18n-lint", "--source=en", "--config=spec/examples/exe/config.yml", "spec/examples/exe/locales/*.yml"
+  system "exe/i18n-lint", "--source=en", "--config=spec/examples/cli/config.yml", "spec/examples/cli/locales/*.yml"
+  puts "Result: exit #{$CHILD_STATUS.exitstatus}. Allowing Rake to continue: failing examples are helpful to see."
 end
 
 task default: %i[spec exe rubocop]

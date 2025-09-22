@@ -1,0 +1,7 @@
+require:
+  - ./rules/my_scope/no_comments
+
+MyScope/NoComments:
+  Enabled: true
+  AllowedPatterns:
+    - '^NOTE: '
