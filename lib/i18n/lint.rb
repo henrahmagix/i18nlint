@@ -27,15 +27,17 @@ module I18n
     # How to process a rule based on the type of the rule.
     module RuleTypes
       require_relative "lint/rule_types/class_rule"
-      require_relative "lint/rule_types/proc_rule"
-      require_relative "lint/rule_types/regexp_rule"
       Registry.register_rule_type(ClassRule)
-      Registry.register_rule_type(ProcRule)
-      Registry.register_rule_type(RegexpRule)
     end
 
-    # Basic set of rules. TODO: add rules that probably help everyone.
+    # Basic set of rules.
     module Rules
+      # Built-in rules that should suit most use-cases.
+      module BuiltIn
+        require_relative "lint/rules/built_in/match"
+        Registry.register_rule(BuiltIn::MatchSegment)
+        Registry.register_rule(BuiltIn::MatchFile)
+      end
     end
   end
 end

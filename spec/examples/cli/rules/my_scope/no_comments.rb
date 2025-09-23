@@ -30,10 +30,18 @@ module MyScope
       end
     end
 
-    def on_file(file) # rubocop:disable Metrics/AbcSize
-      return if config["AllowedPatterns"].empty? && file.yaml.match?(/^# ?/)
+    on_init { @allowed_patterns = config["AllowedPatterns"]&.map { Regexp.new(_1) } }
+    attr_reader :allowed_patterns
 
-      allowed_patterns = config["AllowedPatterns"].map { Regexp.new(_1) }
+    def description
+      return if allowed_patterns.empty?
+
+      "with AllowedPatterns: #{allowed_patterns.map(&:inspect).join(", ")}"
+    end
+
+    def on_file(file)
+      return unless file.yaml.match?(/^# ?/)
+
       comments = Comment.all_from_yaml(file.yaml)
       comments.reject { |comment| allowed_patterns.any? { comment.match?(_1) } }.each do |comment|
         add_file_offence(file, lineno: comment.lineno, source: comment.raw)

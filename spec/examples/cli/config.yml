@@ -5,3 +5,9 @@ MyScope/NoComments:
   Enabled: true
   AllowedPatterns:
     - '^NOTE: '
+
+BuiltIn/MatchSegment:
+  Pattern: wef
+BuiltIn/MatchFile:
+  Pattern: German
+  CaseSensitive: false

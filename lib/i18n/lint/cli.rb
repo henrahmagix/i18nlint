@@ -47,20 +47,28 @@ module I18n
           end
 
           Rule.subclasses.each do |rule_class|
-            if rule_class.name.nil? || rule_class.name.empty?
-              warn "I18n::Lint::Rule subclass must have ::name defined to accept configuration: #{rule_class}"
-              next
-            end
+            rule_conf = { "Enabled" => rule_class.enabled_by_default? }
 
-            rule_key = rule_class.name.delete_prefix("::").delete_prefix("I18n::Lint::Rule::").gsub("::", "/")
-            rule_conf = conf.delete(rule_key) || {}
-            if rule_conf["Enabled"] == true || (rule_class.enabled_by_default? && rule_conf["Enabled"] != false)
-              Registry.register_rule(rule_class, rule_conf)
+            anonymous = rule_class.rule_key.empty?
+            rule_conf.merge!(conf.delete(rule_class.rule_key) || {}) if rule_class.rule_key
+
+            next unless rule_conf["Enabled"]
+
+            if anonymous
+              warn "Anonymous subclasses of I18n::Lint::Rule cannot have configuration unless ::name is defined: " \
+                   "#{rule_class.inspect}"
             end
+            Registry.register_rule(rule_class, rule_conf)
+          rescue RuleTypes::ClassRule::WillNeverRun => e
+            raise unless anonymous
+
+            warn "Anonymous subclass of I18n::Lint::Rule cannot be registered: #{e}"
           end
 
           conf.each_key do |key|
-            warn "Unused configuration: #{key.inspect}"
+            warn "Unused configuration: #{key.inspect}. If this is a rule you're expecting to be used, this means it " \
+                 "hasn't been required or isn't named #{key.gsub("/", "::")} or " \
+                 "I18n::Lint::Rule::#{key.gsub("/", "::")}"
           end
           warn "\n"
         end
@@ -77,13 +85,11 @@ module I18n
 
         puts "\n\nOffences:"
         linter.offences.each do |o|
+          file_info = "#{o.filepath}#{":#{o.lineno}" if o.lineno}"
           segment_info = " in #{o.locale}.#{o.key}" if o.locale && o.key
           message = " - #{o.message}" if o.message
-          puts <<~MSG.chomp
-
-            #{o.filepath}:#{o.lineno}: #{o.rule}#{segment_info}#{message}
-              #{o.source.chomp.gsub("\n", "\n  ")}
-          MSG
+          source = "\n  #{o.source.chomp.gsub("\n", "\n  ")}" if o.source
+          puts "\n#{file_info}#{segment_info}: #{o.rule}#{message}#{source}"
         end
         puts "\n#{linter.offences.size} offences detected"
         exit 1

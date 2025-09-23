@@ -9,16 +9,29 @@ module I18n
     class Rule
       attr_reader :input, :config
 
-      def self.enabled_by_default? = @enable_by_default == true
+      class << self
+        def enabled_by_default? = @enable_by_default.nil? || @enable_by_default
+        def on_init_blocks      = @on_init_blocks ||= []
 
-      def self.enable_by_default(bool)
-        @enable_by_default = bool
+        def enable_by_default(bool)
+          @enable_by_default = bool
+        end
+
+        def on_init(&block)
+          on_init_blocks << block
+        end
+
+        def rule_key
+          name.to_s.gsub(/^(::)?I18n::Lint::Rules?::/, "").gsub("::", "/")
+        end
       end
 
       def initialize(input, config = {})
         @input = input
         @config = config
         @offences = []
+
+        self.class.on_init_blocks.each { |b| instance_exec(&b) }
       end
 
       def add_offence(item, message = nil)
@@ -34,7 +47,7 @@ module I18n
 
       def add_file_offence(file, message = nil, lineno: nil, locale: nil, source: nil)
         @offences << Offence.new(
-          input,
+          make_description,
           file.filepath,
           lineno, # line
           locale, # locale
@@ -46,7 +59,7 @@ module I18n
 
       def add_segment_offence(segment, message)
         @offences << Offence.new(
-          input,
+          make_description,
           segment.filepath,
           segment.lineno,
           segment.locale,
@@ -64,9 +77,13 @@ module I18n
 
       private
 
+      def make_description
+        "#{self.class.rule_key}#{" #{description}" if respond_to?(:description) && description}"
+      end
+
       def make_message(message)
         message ||= config["Message"]
-        message ||= input.description if input.respond_to?(:description)
+        message ||= input.description if input.respond_to?(:description) && input.description
         message
       end
     end
