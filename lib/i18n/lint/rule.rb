@@ -34,6 +34,10 @@ module I18n
         self.class.on_init_blocks.each { |b| instance_exec(&b) }
       end
 
+      def describe
+        "#{self.class.rule_key}#{" #{description}" if respond_to?(:description) && description}"
+      end
+
       def add_offence(item, message = nil)
         case item
         when File
@@ -47,7 +51,7 @@ module I18n
 
       def add_file_offence(file, message = nil, lineno: nil, locale: nil, source: nil)
         @offences << Offence.new(
-          make_description,
+          describe,
           file.filepath,
           lineno, # line
           locale, # locale
@@ -59,7 +63,7 @@ module I18n
 
       def add_segment_offence(segment, message)
         @offences << Offence.new(
-          make_description,
+          describe,
           segment.filepath,
           segment.lineno,
           segment.locale,
@@ -76,10 +80,6 @@ module I18n
       end
 
       private
-
-      def make_description
-        "#{self.class.rule_key}#{" #{description}" if respond_to?(:description) && description}"
-      end
 
       def make_message(message)
         message ||= config["Message"]

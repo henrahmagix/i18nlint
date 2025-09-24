@@ -35,8 +35,7 @@ module I18n
       # Built-in rules that should suit most use-cases.
       module BuiltIn
         require_relative "lint/rules/built_in/match"
-        Registry.register_rule(BuiltIn::MatchSegment)
-        Registry.register_rule(BuiltIn::MatchFile)
+        # They get registered by configuration.
       end
     end
   end

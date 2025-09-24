@@ -16,7 +16,7 @@ RSpec.describe I18n::Lint::Enumerator do
       ]
   end
 
-  it "enumerates each segment" do
+  it "enumerates each segment for a file" do
     instance = described_class.new(examples_dir.join("enumerator/*.yml"), source_locale: "en")
 
     expect(instance.each_segment.map { |segment| "#{segment.locale}:#{segment.key}" })

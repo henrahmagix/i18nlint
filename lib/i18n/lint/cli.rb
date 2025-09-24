@@ -46,6 +46,18 @@ module I18n
             require ::File.expand_path(path, ::File.dirname(config))
           end
 
+          [conf.delete("match-segment"), conf.delete("match-segments")].compact.flatten.each do |match_segment_conf|
+            next if match_segment_conf["Enabled"] == false
+
+            Registry.register_rule(Rules::BuiltIn::MatchSegment, match_segment_conf)
+          end
+
+          [conf.delete("match-file"), conf.delete("match-files")].compact.flatten.each do |match_file_conf|
+            next if match_file_conf["Enabled"] == false
+
+            Registry.register_rule(Rules::BuiltIn::MatchFile, match_file_conf)
+          end
+
           Rule.subclasses.each do |rule_class|
             rule_conf = { "Enabled" => rule_class.enabled_by_default? }
 
@@ -75,7 +87,7 @@ module I18n
 
         linter = Linter.new(filepaths: ARGV, source_locale:)
         puts "Inspecting #{linter.num_files} files"
-        linter.tick_each_file { print "." }
+        linter.tick_each_file { |num_offences| print num_offences.zero? ? "." : "F" }
         linter.run
 
         if linter.offences.empty?

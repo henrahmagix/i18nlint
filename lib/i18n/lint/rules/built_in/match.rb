@@ -41,10 +41,23 @@ module I18n
             return unless pattern
 
             file.yaml.scan(pattern) do |_match|
-              lineno = Regexp.last_match.offset(0)[0]
-              lines = file.yaml[0..lineno].lines
-              add_file_offence(file, nil, lineno: lines.size, source: lines.last)
+              source, lineno = source_for_match(Regexp.last_match, file.yaml)
+              add_file_offence(file, nil, lineno:, source:)
             end
+          end
+
+          def source_for_match(match, yaml)
+            end_of_match = match.offset(0)[1]
+            n = 0
+            lines = []
+            yaml.lines.each do |line|
+              break if n >= end_of_match
+
+              lines << line
+              n += line.length
+            end
+
+            [lines.last, lines.size]
           end
         end
       end

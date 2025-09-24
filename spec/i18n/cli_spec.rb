@@ -24,8 +24,8 @@ RSpec.describe I18n::Lint::CLI do
     expect { described_class.run }
       .to raise_error(SystemExit) { _1.status == 1 }
       .and output(<<~OUT).to_stdout
-        Inspecting 3 files
-        ...
+        Inspecting 5 files
+        F.F.F
 
         Offences:
 
@@ -36,11 +36,11 @@ RSpec.describe I18n::Lint::CLI do
         spec/examples/cli/locales/comments.yml:7: MyScope/NoComments with AllowedPatterns: /^NOTE: /
           # This single line is not allowed.
 
-        spec/examples/cli/locales/fr.yml:5: BuiltIn/MatchFile /German/i
-            i_am_a_g
-
         spec/examples/cli/locales/en.yml:4 in en.causes_offence: BuiltIn/MatchSegment /wef/
           This has wef in it!
+
+        spec/examples/cli/locales/fr.yml:5: BuiltIn/MatchFile /German/i
+            i_am_a_german_key: 'Was gehn der alter?'
 
         4 offences detected
       OUT

@@ -10,6 +10,12 @@ module I18n
 
       def initialize(object, config = {})
         @rule = Rule.new(object, config)
+        @exclude = Array(config["Exclude"])
+      end
+
+      def excluded?(filepath)
+        path = Pathname.new(filepath)
+        @exclude.any? { |dir_pattern| path.fnmatch(dir_pattern) }
       end
 
       def take_offences = rule.take_offences

@@ -38,16 +38,18 @@ module I18n
         block_given? ? enum.each(&) : enum
       end
 
-      def each_segment(&)
+      def each_segment(file: nil, &block)
         enum = ::Enumerator.new do |yielder|
-          each_file do |file|
-            walk_file(file) do |locale, full_key, text, lineno, _line_end|
-              segment = Segment.new(file:, lineno:, key: full_key, text:, locale:, source_locale:)
+          each_file do |i18n_file|
+            next if file && i18n_file != file
+
+            walk_file(i18n_file) do |locale, full_key, text, lineno, _line_end|
+              segment = Segment.new(file: i18n_file, lineno:, key: full_key, text:, locale:, source_locale:)
               yielder << segment
             end
           end
         end
-        block_given? ? enum.each(&) : enum
+        block_given? ? enum.each(&block) : enum
       end
 
       private
@@ -56,6 +58,7 @@ module I18n
 
       def read_all_files(filepaths)
         filepaths.flat_map { Dir.glob(_1) }
+                 .sort
                  .uniq
                  .map { |filepath| [filepath, read_file(filepath)] }
                  .compact

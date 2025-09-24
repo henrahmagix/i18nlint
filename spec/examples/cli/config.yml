@@ -6,8 +6,13 @@ MyScope/NoComments:
   AllowedPatterns:
     - '^NOTE: '
 
-BuiltIn/MatchSegment:
-  Pattern: wef
-BuiltIn/MatchFile:
-  Pattern: German
-  CaseSensitive: false
+match-segments:
+  - Pattern: wef
+    Exclude:
+      - '*_wef.yml'
+
+match-file:
+  - Pattern: German
+    CaseSensitive: false
+    Exclude:
+      - '*de.yml'
