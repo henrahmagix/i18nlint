@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "coverage_helper"
+
 require "i18nlint"
 
 RSpec.configure do |config|
