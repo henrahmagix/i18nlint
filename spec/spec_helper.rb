@@ -19,11 +19,11 @@ RSpec.configure do |config|
   config.run_all_when_everything_filtered = true
 
   config.before(:suite) do
-    config.instance_variable_set(:@original_rule_types, I18n::Lint::Registry.rule_types.clone)
-    config.instance_variable_set(:@original_rules, I18n::Lint::Registry.rules.clone)
+    config.instance_variable_set(:@original_rule_types, I18nLint::Registry.rule_types.clone)
+    config.instance_variable_set(:@original_rules, I18nLint::Registry.rules.clone)
   end
   config.before do
-    I18n::Lint::Registry.instance_variable_set(:@rule_types, config.instance_variable_get(:@original_rule_types).clone)
-    I18n::Lint::Registry.instance_variable_set(:@rules, config.instance_variable_get(:@original_rules).clone)
+    I18nLint::Registry.instance_variable_set(:@rule_types, config.instance_variable_get(:@original_rule_types).clone)
+    I18nLint::Registry.instance_variable_set(:@rules, config.instance_variable_get(:@original_rules).clone)
   end
 end

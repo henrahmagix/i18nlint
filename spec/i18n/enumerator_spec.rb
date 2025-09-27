@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe I18n::Lint::Enumerator do
+RSpec.describe I18nLint::Enumerator do
   let(:examples_dir) { Pathname.new File.expand_path "../examples", __dir__ }
 
   it "enumerates each file" do
@@ -44,7 +44,7 @@ RSpec.describe I18n::Lint::Enumerator do
     end
 
     it "only parses what's needed" do
-      calls = capture_method_calls(I18n::Lint::YamlWithLines, :parse)
+      calls = capture_method_calls(I18nLint::YamlWithLines, :parse)
       instance = described_class.new(examples_dir.join("enumerator/*.yml"), source_locale: "en")
 
       expect { instance.each_file.take(2) }
@@ -57,17 +57,17 @@ RSpec.describe I18n::Lint::Enumerator do
       instance = described_class.new(examples_dir.join("enumerator/*.yml"), source_locale: "en")
 
       expect { |probe| instance.each_file.take(2).each(&probe) }
-        .to yield_successive_args(*[I18n::Lint::File] * 2) # only some files should be yielded
+        .to yield_successive_args(*[I18nLint::File] * 2) # only some files should be yielded
       expect { |probe| instance.each_file.each(&probe) }
-        .to yield_successive_args(*[I18n::Lint::File] * 5) # all files should be yielded
+        .to yield_successive_args(*[I18nLint::File] * 5) # all files should be yielded
     end
 
     it "yields only the segments that are needed" do
       instance = described_class.new(examples_dir.join("enumerator/*.yml"), source_locale: "en")
 
-      allow(I18n::Lint::Segment).to receive(:new).and_call_original
-      expect(instance.each_segment.take(3)).to match [I18n::Lint::Segment] * 3
-      expect(I18n::Lint::Segment).to have_received(:new).exactly(3).times
+      allow(I18nLint::Segment).to receive(:new).and_call_original
+      expect(instance.each_segment.take(3)).to match [I18nLint::Segment] * 3
+      expect(I18nLint::Segment).to have_received(:new).exactly(3).times
     end
   end
 end

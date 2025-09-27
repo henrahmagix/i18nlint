@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module MyScope
-  class NoComments < I18n::Lint::Rule
+  class NoComments < I18nLint::Rule
     Comment = Struct.new(:lineno, :raw) do
       def self.all_from_yaml(yaml) # rubocop:disable Metrics/MethodLength
         comments = []

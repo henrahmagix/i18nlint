@@ -16,11 +16,11 @@ module DisableTestSubclassesToAvoidTestPolution
     inherited_location.match?(%r{^#{File.expand_path("..", __dir__)}/.*_spec\.rb$})
   end
 end
-I18n::Lint::Rule.singleton_class.prepend DisableTestSubclassesToAvoidTestPolution
+I18nLint::Rule.singleton_class.prepend DisableTestSubclassesToAvoidTestPolution
 
-RSpec.describe I18n::Lint::CLI do
+RSpec.describe I18nLint::CLI do
   before do
-    allow(I18n::Lint::Rule).to receive(:subclasses).and_wrap_original do |m, *a, **kw, &b|
+    allow(I18nLint::Rule).to receive(:subclasses).and_wrap_original do |m, *a, **kw, &b|
       m.call(*a, **kw, &b).reject do |subclass|
         subclass.test_class?.tap do |rejected|
           warn "Ignoring rule from other tests: #{subclass.name || "<no name>"}/#{subclass.inspect}" if rejected

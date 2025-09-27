@@ -1,30 +1,28 @@
 # frozen_string_literal: true
 
-module I18n
-  module Lint
-    # Parse YAML such that every value is a ValueWithLineNumbers.
-    class YamlWithLines
-      ValueWithLineNumbers = Struct.new(:value, :lines)
+module I18nLint
+  # Parse YAML such that every value is a ValueWithLineNumbers.
+  class YamlWithLines
+    ValueWithLineNumbers = Struct.new(:value, :lines)
 
-      def self.parse(yaml)
-        handler = Psych::TreeWithLineNumbersBuilder.new
-        handler.parser = Psych::Parser.new(handler)
-        handler.parser.parse(yaml)
-        Psych::Visitors::ToRubyWithLineNumbers.create.accept(handler.root)
-      end
+    def self.parse(yaml)
+      handler = Psych::TreeWithLineNumbersBuilder.new
+      handler.parser = Psych::Parser.new(handler)
+      handler.parser.parse(yaml)
+      Psych::Visitors::ToRubyWithLineNumbers.create.accept(handler.root)
+    end
 
-      def self.walk(val, key_parts = [], &) # rubocop:disable Metrics/MethodLength
-        case val
-        when ValueWithLineNumbers
-          yield key_parts, val.value, val.lines.first, val.lines.last
-        when Hash
-          val.each do |each_key, each_val|
-            walk(each_val, key_parts + [each_key], &)
-          end
-        when Enumerable
-          val.each_with_index do |each_val, each_key|
-            walk(each_val, key_parts + [each_key], &)
-          end
+    def self.walk(val, key_parts = [], &) # rubocop:disable Metrics/MethodLength
+      case val
+      when ValueWithLineNumbers
+        yield key_parts, val.value, val.lines.first, val.lines.last
+      when Hash
+        val.each do |each_key, each_val|
+          walk(each_val, key_parts + [each_key], &)
+        end
+      when Enumerable
+        val.each_with_index do |each_val, each_key|
+          walk(each_val, key_parts + [each_key], &)
         end
       end
     end
@@ -84,7 +82,7 @@ class Psych::Visitors::ToRubyWithLineNumbers < Psych::Visitors::ToRuby # rubocop
         start_line = end_line = v.line_number + 1
 
         start_line = k.line_number + 1 if k.is_a? Psych::Nodes::ScalarWithLineNumber
-        val = I18n::Lint::YamlWithLines::ValueWithLineNumbers.new(val, start_line..end_line)
+        val = I18nLint::YamlWithLines::ValueWithLineNumbers.new(val, start_line..end_line)
       end
 
       if key == "<<" && k.tag != "tag:yaml.org,2002:str"

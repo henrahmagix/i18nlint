@@ -2,4 +2,4 @@
 # frozen_string_literal: true
 
 require "i18n/lint/cli"
-I18n::Lint::CLI.run
+I18nLint::CLI.run

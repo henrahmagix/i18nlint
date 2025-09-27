@@ -3,94 +3,92 @@
 require_relative "cloneable_struct"
 require_relative "yaml_with_lines"
 
-module I18n
-  module Lint
-    File = CloneableStruct.new(:filepath, :parsed, :yaml, keyword_init: true)
+module I18nLint
+  File = CloneableStruct.new(:filepath, :parsed, :yaml, keyword_init: true)
 
-    Segment = CloneableStruct.new(:file, :lineno, :key, :text, :locale, :source_locale, keyword_init: true) do
-      def filepath = file.filepath
+  Segment = CloneableStruct.new(:file, :lineno, :key, :text, :locale, :source_locale, keyword_init: true) do
+    def filepath = file.filepath
 
-      def source?
-        locale == source_locale
+    def source?
+      locale == source_locale
+    end
+  end
+
+  # Yields each parsed file and segment by `:each_file` and `:each_segment` respectively. `:each` is not supported.
+  class Enumerator
+    def initialize(filepaths, source_locale:)
+      @read_files_by_filepath = read_all_files(Array(filepaths).map(&:to_s))
+      @source_locale = source_locale
+
+      @parsed_files_by_filepath = {}
+      @segments_by_filepath = Hash.new { |h, filepath| h[filepath] = [] }
+    end
+
+    def num_files
+      @read_files_by_filepath.size
+    end
+
+    def each_file(&)
+      enum = ::Enumerator.new do |yielder|
+        @read_files_by_filepath.each do |filepath, yaml|
+          yielder << @parsed_files_by_filepath[filepath] ||= parse_yaml(yaml, filepath:)
+        end
+      end
+      block_given? ? enum.each(&) : enum
+    end
+
+    def each_segment(file: nil, &block)
+      enum = ::Enumerator.new do |yielder|
+        each_file do |i18n_file|
+          next if file && i18n_file != file
+
+          walk_file(i18n_file) do |locale, full_key, text, lineno, _line_end|
+            segment = Segment.new(file: i18n_file, lineno:, key: full_key, text:, locale:, source_locale:)
+            yielder << segment
+          end
+        end
+      end
+      block_given? ? enum.each(&block) : enum
+    end
+
+    private
+
+    attr_reader :source_locale
+
+    def read_all_files(filepaths)
+      filepaths.flat_map { Dir.glob(_1) }
+               .sort
+               .uniq
+               .map { |filepath| [filepath, read_file(filepath)] }
+               .compact
+               .to_h
+    end
+
+    def read_file(filepath)
+      ::File.read(filepath)
+    rescue Errno::ENOENT
+      warn "cannot read file: #{filepath.inspect}"
+      nil
+    end
+
+    def parse_yaml(yaml, filepath:)
+      parsed = YamlWithLines.parse(yaml)
+      File.new(filepath:, parsed:, yaml:)
+    end
+
+    def walk_file(file)
+      file.parsed.each do |doc|
+        YamlWithLines.walk(doc) do |(locale, *key_parts), text, line_start, line_end|
+          yield locale, key_parts.join("."), text, line_start, line_end
+        end
       end
     end
 
-    # Yields each parsed file and segment by `:each_file` and `:each_segment` respectively. `:each` is not supported.
-    class Enumerator
-      def initialize(filepaths, source_locale:)
-        @read_files_by_filepath = read_all_files(Array(filepaths).map(&:to_s))
-        @source_locale = source_locale
-
-        @parsed_files_by_filepath = {}
-        @segments_by_filepath = Hash.new { |h, filepath| h[filepath] = [] }
-      end
-
-      def num_files
-        @read_files_by_filepath.size
-      end
-
-      def each_file(&)
-        enum = ::Enumerator.new do |yielder|
-          @read_files_by_filepath.each do |filepath, yaml|
-            yielder << @parsed_files_by_filepath[filepath] ||= parse_yaml(yaml, filepath:)
-          end
-        end
-        block_given? ? enum.each(&) : enum
-      end
-
-      def each_segment(file: nil, &block)
-        enum = ::Enumerator.new do |yielder|
-          each_file do |i18n_file|
-            next if file && i18n_file != file
-
-            walk_file(i18n_file) do |locale, full_key, text, lineno, _line_end|
-              segment = Segment.new(file: i18n_file, lineno:, key: full_key, text:, locale:, source_locale:)
-              yielder << segment
-            end
-          end
-        end
-        block_given? ? enum.each(&block) : enum
-      end
-
-      private
-
-      attr_reader :source_locale
-
-      def read_all_files(filepaths)
-        filepaths.flat_map { Dir.glob(_1) }
-                 .sort
-                 .uniq
-                 .map { |filepath| [filepath, read_file(filepath)] }
-                 .compact
-                 .to_h
-      end
-
-      def read_file(filepath)
-        ::File.read(filepath)
-      rescue Errno::ENOENT
-        warn "cannot read file: #{filepath.inspect}"
-        nil
-      end
-
-      def parse_yaml(yaml, filepath:)
-        parsed = YamlWithLines.parse(yaml)
-        File.new(filepath:, parsed:, yaml:)
-      end
-
-      def walk_file(file)
-        file.parsed.each do |doc|
-          YamlWithLines.walk(doc) do |(locale, *key_parts), text, line_start, line_end|
-            yield locale, key_parts.join("."), text, line_start, line_end
-          end
-        end
-      end
-
-      def walk_segments(key, val, &)
-        if val.is_a?(String) || val.nil?
-          yield key, val
-        else
-          val.each { |nested_key, nested_val| walk_segments("#{key}.#{nested_key}", nested_val, &) }
-        end
+    def walk_segments(key, val, &)
+      if val.is_a?(String) || val.nil?
+        yield key, val
+      else
+        val.each { |nested_key, nested_val| walk_segments("#{key}.#{nested_key}", nested_val, &) }
       end
     end
   end

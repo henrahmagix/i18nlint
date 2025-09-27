@@ -4,7 +4,7 @@ require_relative "lib/i18n/lint/version"
 
 Gem::Specification.new do |spec|
   spec.name = "i18nlint"
-  spec.version = I18n::Lint::VERSION
+  spec.version = I18nLint::VERSION
   spec.authors = ["Henry Blyth"]
   spec.email = ["blyth.henry@gmail.com"]
 
