@@ -27,7 +27,7 @@ module I18nLint
           return unless pattern
 
           segment.text.scan(pattern) do |_match|
-            add_segment_offence(segment, nil)
+            add_segment_offence(segment, nil, highlight: Regexp.last_match.offset(0))
           end
         end
       end
@@ -39,34 +39,56 @@ module I18nLint
         def on_segment_comparison(segment, source_segment)
           return unless pattern
 
-          trans = segment.text.scan(pattern) # 🏳️‍⚧️🏳️‍🌈🫶
-          source = source_segment.text.scan(pattern)
-
-          each_mismatch(trans, source) do |match, trans_count, source_count|
+          each_mismatch(segment.text, source_segment.text) do |mismatch|
             add_segment_compare_offence(
-              segment,
-              source_segment,
-              "#{match} found #{trans_count} #{trans_count == 1 ? "time" : "times"}, but should be #{source_count}"
+              segment, source_segment,
+              "#{mismatch.match} found #{mismatch.actual_count} #{mismatch.actual_count == 1 ? "time" : "times"}, " \
+              "but should be #{mismatch.expected_count}",
+              highlight: mismatch.highlight, source_highlight: mismatch.source_highlight
             )
           end
         end
 
         private
 
-        def each_mismatch(trans, source)
-          trans.delete_if do |match|
-            if (i = source.find_index(match))
+        def scan(text)
+          text.enum_for(:scan, pattern).map { Scan.new(_1, Regexp.last_match.offset(0)) }
+        end
+        Scan = Struct.new(:match, :highlight)
+        private_constant :Scan
+
+        def reduce(trans, source)
+          trans.delete_if do |scan|
+            if (i = source.find_index { _1.match == scan.match })
               source.delete_at(i)
               next true
             end
           end
-
-          trans_tally = trans.tally
-          source_tally = source.tally
-
-          trans_tally.each { |match, count| yield match, count, source_tally[match] || 0 }
-          source_tally.each { |match, count| yield match, trans_tally[match] || 0, count }
         end
+
+        def scan_and_reduce(trans, source)
+          trans = scan(trans) # 🏳️‍⚧️🏳️‍🌈🫶
+          source = scan(source)
+          reduce(trans, source)
+
+          [trans, source]
+        end
+
+        def each_mismatch(trans, source)
+          trans, source = scan_and_reduce(trans, source)
+
+          trans_tally = trans.map(&:match).tally
+          source_tally = source.map(&:match).tally
+
+          trans.each  { |scan| yield mismatch_from_tallies(scan.match, trans_tally, source_tally, scan.highlight, nil) }
+          source.each { |scan| yield mismatch_from_tallies(scan.match, trans_tally, source_tally, nil, scan.highlight) }
+        end
+
+        def mismatch_from_tallies(match, trans_tally, source_tally, highlight, source_highlight)
+          Mismatch.new(match, trans_tally[match] || 0, source_tally[match] || 0, highlight, source_highlight)
+        end
+        Mismatch = Struct.new(:match, :actual_count, :expected_count, :highlight, :source_highlight)
+        private_constant :Mismatch
 
         def plural_count(count)
           count == 1 ? "#{count} time" : "#{count} times"
@@ -80,9 +102,10 @@ module I18nLint
         def on_file(file)
           return unless pattern
 
-          file.yaml.scan(pattern) do |_match|
-            source, lineno = source_for_match(Regexp.last_match, file.yaml)
-            add_file_offence(file, nil, lineno:, source:)
+          file.yaml.scan(pattern) do
+            source, lineno, offset_adjust = source_for_match(Regexp.last_match, file.yaml)
+            highlight = Regexp.last_match.offset(0).map { _1 - offset_adjust }
+            add_file_offence(file, nil, lineno:, source:, highlight:)
           end
         end
 
@@ -97,7 +120,7 @@ module I18nLint
             n += line.length
           end
 
-          [lines.last, lines.size]
+          [lines.last, lines.size, n - lines.last.size]
         end
       end
     end

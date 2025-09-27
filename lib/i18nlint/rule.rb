@@ -2,10 +2,10 @@
 
 module I18nLint
   # A registered offence as reported by a rule.
-  FileOffence = Struct.new(:rule, :filepath, :lineno, :text, :message) do
+  FileOffence = Struct.new(:rule, :filepath, :lineno, :text, :message, :highlight) do
     def source_offence = nil
   end
-  SegmentOffence = Struct.new(:rule, :filepath, :lineno, :locale, :key, :text, :message) do
+  SegmentOffence = Struct.new(:rule, :filepath, :lineno, :locale, :key, :text, :message, :highlight) do
     def source_offence = nil
   end
   CompareSegmentOffence = Struct.new(*SegmentOffence.members, :source_offence)
@@ -54,24 +54,25 @@ module I18nLint
       end
     end
 
-    def add_file_offence(file, message = nil, lineno: nil, source: nil)
+    def add_file_offence(file, message = nil, lineno: nil, source: nil, highlight: nil)
       @offences << FileOffence.new(
         describe,
         file.filepath,
         lineno,
         source, # don't print the whole file contents in the offence
-        make_message(message)
+        make_message(message),
+        highlight
       )
     end
 
-    def add_segment_offence(segment, message = nil)
-      @offences << make_segment_offence(describe, segment, make_message(message), SegmentOffence)
+    def add_segment_offence(segment, message = nil, highlight: nil)
+      @offences << make_segment_offence(SegmentOffence, segment, describe, make_message(message), highlight:)
     end
 
-    def add_segment_compare_offence(segment, source_segment, message = nil)
-      @offences << make_segment_offence(describe, segment, make_message(message), CompareSegmentOffence).tap do |o|
-        o.source_offence = make_segment_offence(nil, source_segment, nil, SegmentOffence)
-      end
+    def add_segment_compare_offence(segment, source_segment, message = nil, highlight: nil, source_highlight: nil)
+      o = make_segment_offence(CompareSegmentOffence, segment, describe, make_message(message), highlight:)
+      o.source_offence = make_segment_offence(SegmentOffence, source_segment, nil, nil, highlight: source_highlight)
+      @offences << o
     end
 
     def take_offences
@@ -82,7 +83,7 @@ module I18nLint
 
     private
 
-    def make_segment_offence(description, segment, message, offence_class)
+    def make_segment_offence(offence_class, segment, description, message, highlight:)
       offence_class.new(
         description,
         segment.filepath,
@@ -90,7 +91,8 @@ module I18nLint
         segment.locale,
         segment.key,
         segment.text,
-        message
+        message,
+        highlight
       )
     end
 

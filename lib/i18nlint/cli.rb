@@ -4,6 +4,7 @@ require "optparse"
 require "yaml"
 
 require "i18nlint"
+require "i18nlint/highlighters/indicate_below_line"
 
 module I18nLint
   # Run the linter in your terminal.
@@ -85,13 +86,13 @@ module I18nLint
     private
 
     def format_offence(offence)
-      o = indent(offence.to_h).merge(message: make_message(offence))
+      o = offence_hash_for_formatting(offence).merge(message: make_message(offence))
 
       case offence
       when FileOffence then FILE_OFFENCE_DISPLAY % o
       when SegmentOffence then SEGMENT_OFFENCE_DISPLAY % o
       when CompareSegmentOffence
-        source = indent(offence.source_offence.to_h)
+        source = offence_hash_for_formatting(offence.source_offence)
 
         COMPARE_SEGMENT_OFFENCE_DISPLAY % rename_keys(o, 'trans_\0').merge(rename_keys(source, 'source_\0'))
       end.gsub(/ +$/, "")
@@ -103,6 +104,12 @@ module I18nLint
       message
     end
 
+    def offence_hash_for_formatting(offence)
+      o = offence.to_h
+      o[:text] = highlight(o[:text], offence.highlight)
+      indent(o)
+    end
+
     def indent(hash)
       hash.keys.each do |k|
         hash[:"#{k}_indented"] = "  #{hash[k].to_s.chomp.gsub("\n", "\n  ")}"
@@ -112,6 +119,12 @@ module I18nLint
 
     def rename_keys(hash, gsub)
       hash.transform_keys! { _1.to_s.gsub(/^(.*)$/, gsub).to_sym }
+    end
+
+    def highlight(text, range)
+      return text if range.nil? || range.to_a.empty?
+
+      Highlighters::IndicateBelowLine.indicate(text, range)
     end
   end
 end

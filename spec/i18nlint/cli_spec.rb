@@ -65,14 +65,17 @@ RSpec.describe I18nLint::CLI do
 
         spec/examples/cli/locales/en.yml:4 in en.causes_offence: BuiltIn/MatchSegment /wef/
           This has wef in it!
+                   ^^^
 
         spec/examples/cli/locales/fr.yml:5: BuiltIn/MatchFile /German/i
             i_am_a_german_key: 'Was gehn der alter?'
+                   ^^^^^^
 
         spec/examples/cli/locales/raise_brackets_comparison.yml:4 in fr.brackets2: BuiltIn/MatchSegmentToSource /\\[[A-Z_]+\\]/ - [YOUR_TAG] found 0 times, but should be 1
           et ca c'est your tag
         spec/examples/cli/locales/raise_brackets_comparison.yml:2 in en.brackets2:
           and that is [YOUR_TAG]
+                      ^^^^^^^^^^
 
         5 offences detected
       OUT
