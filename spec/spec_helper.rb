@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "i18n/lint"
+require "i18nlint"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

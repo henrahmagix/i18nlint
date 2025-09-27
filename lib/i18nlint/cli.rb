@@ -3,7 +3,7 @@
 require "optparse"
 require "yaml"
 
-require "i18n/lint"
+require "i18nlint"
 
 module I18nLint
   # Run the linter in your terminal.

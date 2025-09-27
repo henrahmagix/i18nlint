@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-require_relative "lint/version"
-require_relative "lint/linter"
-require_relative "lint/registry"
-require_relative "lint/rule_type"
-require_relative "lint/rule"
-require_relative "lint/enumerator"
+require_relative "i18nlint/version"
+require_relative "i18nlint/linter"
+require_relative "i18nlint/registry"
+require_relative "i18nlint/rule_type"
+require_relative "i18nlint/rule"
+require_relative "i18nlint/enumerator"
 
 # Detect various "offences" in your I18n files.
 module I18nLint
@@ -26,7 +26,7 @@ module I18nLint
 
   # How to process a rule based on the type of the rule.
   module RuleTypes
-    require_relative "lint/rule_types/class_rule"
+    require_relative "i18nlint/rule_types/class_rule"
     Registry.register_rule_type(ClassRule)
   end
 
@@ -34,7 +34,7 @@ module I18nLint
   module Rules
     # Built-in rules that should suit most use-cases.
     module BuiltIn
-      require_relative "lint/rules/built_in/match"
+      require_relative "i18nlint/rules/built_in/match"
       # They get registered by configuration.
     end
   end

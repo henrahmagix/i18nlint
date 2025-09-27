@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "i18n/lint/cli"
+require "i18nlint/cli"
 
 module DisableTestSubclassesToAvoidTestPolution
   def inherited(base)

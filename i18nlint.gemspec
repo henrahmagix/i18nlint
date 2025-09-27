@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "lib/i18n/lint/version"
+require_relative "lib/i18nlint/version"
 
 Gem::Specification.new do |spec|
   spec.name = "i18nlint"
