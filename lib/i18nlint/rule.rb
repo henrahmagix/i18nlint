@@ -2,10 +2,13 @@
 
 module I18nLint
   # A registered offence as reported by a rule.
-  Offence = Struct.new(:rule, :filepath, :lineno, :locale, :key, :source, :message) do
+  FileOffence = Struct.new(:rule, :filepath, :lineno, :text, :message) do
     def source_offence = nil
   end
-  CompareOffence = Struct.new(*Offence.members, :source_offence)
+  SegmentOffence = Struct.new(:rule, :filepath, :lineno, :locale, :key, :text, :message) do
+    def source_offence = nil
+  end
+  CompareSegmentOffence = Struct.new(*SegmentOffence.members, :source_offence)
 
   # Base class for Class rule types.
   class Rule
@@ -51,25 +54,23 @@ module I18nLint
       end
     end
 
-    def add_file_offence(file, message = nil, lineno: nil, locale: nil, source: nil)
-      @offences << Offence.new(
+    def add_file_offence(file, message = nil, lineno: nil, source: nil)
+      @offences << FileOffence.new(
         describe,
         file.filepath,
         lineno,
-        locale,
-        nil, # key
         source, # don't print the whole file contents in the offence
         make_message(message)
       )
     end
 
     def add_segment_offence(segment, message = nil)
-      @offences << make_segment_offence(describe, segment, make_message(message))
+      @offences << make_segment_offence(describe, segment, make_message(message), SegmentOffence)
     end
 
     def add_segment_compare_offence(segment, source_segment, message = nil)
-      @offences << make_segment_offence(describe, segment, make_message(message), CompareOffence).tap do |offence|
-        offence.source_offence = make_segment_offence(nil, source_segment, nil)
+      @offences << make_segment_offence(describe, segment, make_message(message), CompareSegmentOffence).tap do |o|
+        o.source_offence = make_segment_offence(nil, source_segment, nil, SegmentOffence)
       end
     end
 
@@ -81,9 +82,9 @@ module I18nLint
 
     private
 
-    def make_segment_offence(describe, segment, message = nil, offence_class = Offence)
+    def make_segment_offence(description, segment, message, offence_class)
       offence_class.new(
-        describe,
+        description,
         segment.filepath,
         segment.lineno,
         segment.locale,

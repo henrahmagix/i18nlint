@@ -21,3 +21,6 @@ match-file:
     CaseSensitive: false
     Exclude:
       - '*de.yml'
+
+ThisWillNotBe/Used:
+  Enabled: true

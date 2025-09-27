@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 require_relative "i18nlint/version"
+require_relative "i18nlint/error"
+require_relative "i18nlint/configuration"
 require_relative "i18nlint/linter"
 require_relative "i18nlint/registry"
 require_relative "i18nlint/rule_type"

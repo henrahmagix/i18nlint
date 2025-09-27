@@ -29,10 +29,25 @@ RSpec.describe I18nLint::CLI do
     end
   end
 
+  def match_on_one_line(*parts)
+    include(/#{parts.join(".*")}/)
+  end
+
+  def system_exit(expected_status)
+    raise_error(SystemExit) { |e| expect(e.status).to be(expected_status) }
+  end
+
   it "prints the offences and exits 0" do
     stub_const "::ARGV", ["--source=en", "--config=spec/examples/cli/config.yml", "spec/examples/cli/locales/*.yml"]
     expect { described_class.run }
-      .to raise_error(SystemExit) { _1.status == 1 }
+      .to system_exit(1)
+      .and output(
+        match_on_one_line(
+          'Unused configuration "ThisWillNotBe/Used" expects class ThisWillNotBe::Used',
+          "hasn't been loaded",
+          "doesn't subclass I18nLint::Rule"
+        )
+      ).to_stderr
       .and output(<<~OUT).to_stdout
         Inspecting 7 files
         F.F.F..

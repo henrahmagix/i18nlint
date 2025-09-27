@@ -8,115 +8,110 @@ require "i18nlint"
 module I18nLint
   # Run the linter in your terminal.
   class CLI
-    def self.run # rubocop:disable Metrics/AbcSize,Metrics/MethodLength,Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity
-      source_locale = nil
-      config = nil
+    def self.run
+      new.run
+    end
 
-      parser = OptionParser.new do |parser|
-        parser.banner = "Usage: i18nlint files... --source=LOCALE --config=path/to/.i18nlint.yml"
+    def run # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
+      conf = Configuration.new.tap do |conf|
+        conf.load_from_argv_and_file!
 
-        parser.on("--source=LOCALE", "The locale to configure segment comparisons against source.") do |v|
-          source_locale = v
-        end
-        parser.on("--config=CONFIG", "The configuration of rules.") do |v|
-          config = v
-        end
-      end
-      parser.parse!
-
-      if source_locale.nil?
-        warn parser
-        exit 1
-      end
-
-      config ||= [
-        ::File.join(__dir__, ".i18nlint.yml"),
-        ::File.join(Dir.home, ".i18nlint.yml")
-      ].find { |f| ::File.exist?(f) }
-
-      if config
-        conf = begin
-          ::YAML.safe_load_file(config)
-        rescue ::Errno::ENOENT
-          {}
+        if conf.source_locale.nil?
+          warn conf.help
+          exit 1
         end
 
-        conf.delete("require").each do |path|
-          require ::File.expand_path(path, ::File.dirname(config))
+        if conf.config_file_does_not_exist
+          warn "Config file does not exist: #{conf.config_file_does_not_exist}"
+          warn conf.help
+          exit 1
         end
 
-        conf.delete("match-segment")&.each do |conf|
-          next if conf["Enabled"] == false
-
-          Registry.register_rule(Rules::BuiltIn::MatchSegment, conf)
+        conf.register_rules!
+        conf.remaining_rule_options.each_key do |key|
+          warn "Unused configuration #{key.inspect} expects class #{key.gsub("/", "::")} to subclass I18nLint::Rule. " \
+               "If this is a rule you're expecting to be used, that means it hasn't been loaded in the `require:`" \
+               "list, or it doesn't subclass I18nLint::Rule."
+          warn
         end
-
-        conf.delete("match-file")&.each do |conf|
-          next if conf["Enabled"] == false
-
-          Registry.register_rule(Rules::BuiltIn::MatchFile, conf)
-        end
-
-        conf.delete("match-segment-to-source")&.each do |conf|
-          next if conf["Enabled"] == false
-
-          Registry.register_rule(Rules::BuiltIn::MatchSegmentToSource, conf)
-        end
-
-        Rule.subclasses.each do |rule_class|
-          rule_conf = { "Enabled" => rule_class.enabled_by_default? }
-
-          anonymous = rule_class.rule_key.empty?
-          rule_conf.merge!(conf.delete(rule_class.rule_key) || {}) if rule_class.rule_key
-
-          next unless rule_conf["Enabled"]
-
-          if anonymous
-            warn "Anonymous subclasses of I18nLint::Rule cannot have configuration unless ::name is defined: " \
-                 "#{rule_class.inspect}"
-          end
-          Registry.register_rule(rule_class, rule_conf)
-        rescue RuleTypes::ClassRule::WillNeverRun => e
-          raise unless anonymous
-
-          warn "Anonymous subclass of I18nLint::Rule cannot be registered: #{e}"
-        end
-
-        conf.each_key do |key|
-          warn "Unused configuration: #{key.inspect}. If this is a rule you're expecting to be used, this means it " \
-               "hasn't been required or isn't named #{key.gsub("/", "::")} or " \
-               "I18nLint::Rule::#{key.gsub("/", "::")}"
-        end
-        warn "\n"
+      rescue ConfigurationProblems => e
+        warn e.message
       end
 
-      linter = Linter.new(filepaths: ARGV, source_locale:)
+      linter = Linter.new(filepaths: ARGV, source_locale: conf.source_locale)
+      tick = ->(num_offences) { print num_offences.zero? ? "." : "F" }
+      linter.tick_each_file(&tick)
+      linter.tick_each_comparison(&tick)
+
       puts "Inspecting #{linter.num_files} files"
-      linter.tick_each_file { |num_offences| print num_offences.zero? ? "." : "F" }
-      linter.tick_each_comparison { |num_offences| print num_offences.zero? ? "." : "F" }
       linter.run
-      puts "\nComparing segments to source #{source_locale}"
+      puts
+      puts "Comparing segments to source #{conf.source_locale}"
       linter.run_comparison
+      puts
+      puts
 
       if linter.offences.empty?
-        puts "\n\nNo offences detected\n\n"
+        puts "No offences detected"
+        puts
         exit 0
       end
 
-      puts "\n\nOffences:"
-      linter.offences.each do |o|
-        file_info = "#{o.filepath}#{":#{o.lineno}" if o.lineno}"
-        segment_info = " in #{o.locale}.#{o.key}" if o.locale && o.key
-        message = " - #{o.message}" if o.message
-        source = "\n  #{o.source.chomp.gsub("\n", "\n  ")}" if o.source
-        puts "\n#{file_info}#{segment_info}: #{o.rule}#{message}#{source}"
-        next unless (o = o.source_offence)
-
-        source = "\n  #{o.source.chomp.gsub("\n", "\n  ")}"
-        puts "#{o.filepath}#{":#{o.lineno}" if o.lineno} in #{o.locale}.#{o.key}:#{source}"
-      end
-      puts "\n#{linter.offences.size} offences detected"
+      puts "Offences:"
+      puts
+      puts linter.offences.map { format_offence(_1) }.join("\n")
+      puts
+      puts "#{linter.offences.size} offences detected"
       exit 1
+    end
+
+    FILE_OFFENCE_DISPLAY = <<~MSG
+      %<filepath>s:%<lineno>s: %<message>s
+      %<text_indented>s
+    MSG
+
+    SEGMENT_OFFENCE_DISPLAY = <<~MSG
+      %<filepath>s:%<lineno>s in %<locale>s.%<key>s: %<message>s
+      %<text_indented>s
+    MSG
+
+    COMPARE_SEGMENT_OFFENCE_DISPLAY = <<~MSG # 🏳️‍⚧️🏳️‍🌈🫶
+      %<trans_filepath>s:%<trans_lineno>s in %<trans_locale>s.%<trans_key>s: %<trans_message>s
+      %<trans_text_indented>s
+      %<source_filepath>s:%<source_lineno>s in %<source_locale>s.%<source_key>s:
+      %<source_text_indented>s
+    MSG
+
+    private
+
+    def format_offence(offence)
+      o = indent(offence.to_h).merge(message: make_message(offence))
+
+      case offence
+      when FileOffence then FILE_OFFENCE_DISPLAY % o
+      when SegmentOffence then SEGMENT_OFFENCE_DISPLAY % o
+      when CompareSegmentOffence
+        source = indent(offence.source_offence.to_h)
+
+        COMPARE_SEGMENT_OFFENCE_DISPLAY % rename_keys(o, 'trans_\0').merge(rename_keys(source, 'source_\0'))
+      end.gsub(/ +$/, "")
+    end
+
+    def make_message(offence)
+      message = +offence.rule.to_s
+      message.concat " - #{offence.message}" if offence.message
+      message
+    end
+
+    def indent(hash)
+      hash.keys.each do |k|
+        hash[:"#{k}_indented"] = "  #{hash[k].to_s.chomp.gsub("\n", "\n  ")}"
+      end
+      hash
+    end
+
+    def rename_keys(hash, gsub)
+      hash.transform_keys! { _1.to_s.gsub(/^(.*)$/, gsub).to_sym }
     end
   end
 end

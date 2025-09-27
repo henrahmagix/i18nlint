@@ -12,18 +12,14 @@ module I18nLint
       Psych::Visitors::ToRubyWithLineNumbers.create.accept(handler.root)
     end
 
-    def self.walk(val, key_parts = [], &) # rubocop:disable Metrics/MethodLength
+    def self.walk(val, key_parts = [], &)
       case val
       when ValueWithLineNumbers
         yield key_parts, val.value, val.lines.first, val.lines.last
       when Hash
-        val.each do |each_key, each_val|
-          walk(each_val, key_parts + [each_key], &)
-        end
+        val.each { |each_key, each_val| walk(each_val, key_parts + [each_key], &) }
       when Enumerable
-        val.each_with_index do |each_val, each_key|
-          walk(each_val, key_parts + [each_key], &)
-        end
+        val.each_with_index { |each_val, each_key| walk(each_val, key_parts + [each_key], &) }
       end
     end
   end

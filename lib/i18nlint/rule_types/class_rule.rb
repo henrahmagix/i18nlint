@@ -23,8 +23,11 @@ module I18nLint
 
       # Avoid custom rules that will never get used.
       class WillNeverRun < StandardError
+        attr_reader :rule_class
+
         def initialize(instance)
-          super("ClassRule #{instance.class} will never be used: it must respond to one of #{LINT_METHODS}")
+          @rule_class = instance.class
+          super("ClassRule #{rule_class} will never be used: it must respond to one of #{LINT_METHODS}")
         end
       end
 
