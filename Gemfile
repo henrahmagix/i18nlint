@@ -2,7 +2,7 @@
 
 source "https://rubygems.org"
 
-# Specify your gem's dependencies in i18n-lint.gemspec
+# Specify your gem's dependencies in i18nlint.gemspec
 gemspec
 
 gem "irb"

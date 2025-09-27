@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    i18n-lint (0.1.0)
+    i18nlint (0.1.0)
 
 GEM
   remote: https://rubygems.org/
@@ -78,7 +78,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  i18n-lint!
+  i18nlint!
   irb
   rake (~> 13.0)
   rspec (~> 3.0)

@@ -14,7 +14,7 @@ module I18n
         config = nil
 
         parser = OptionParser.new do |parser|
-          parser.banner = "Usage: i18n-lint files... --source=LOCALE --config=path/to/.i18n-lint.yml"
+          parser.banner = "Usage: i18nlint files... --source=LOCALE --config=path/to/.i18nlint.yml"
 
           parser.on("--source=LOCALE", "The locale to configure segment comparisons against source.") do |v|
             source_locale = v
@@ -31,8 +31,8 @@ module I18n
         end
 
         config ||= [
-          ::File.join(__dir__, ".i18n-lint.yml"),
-          ::File.join(Dir.home, ".i18n-lint.yml")
+          ::File.join(__dir__, ".i18nlint.yml"),
+          ::File.join(Dir.home, ".i18nlint.yml")
         ].find { |f| ::File.exist?(f) }
 
         if config

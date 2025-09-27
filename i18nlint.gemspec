@@ -3,14 +3,14 @@
 require_relative "lib/i18n/lint/version"
 
 Gem::Specification.new do |spec|
-  spec.name = "i18n-lint"
+  spec.name = "i18nlint"
   spec.version = I18n::Lint::VERSION
   spec.authors = ["Henry Blyth"]
   spec.email = ["blyth.henry@gmail.com"]
 
   spec.summary = "Linting for your I18n"
   spec.description = spec.summary
-  spec.homepage = "https://github.com/henrahmagix/i18n-lint"
+  spec.homepage = "https://github.com/henrahmagix/i18nlint"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.1.0"
 
