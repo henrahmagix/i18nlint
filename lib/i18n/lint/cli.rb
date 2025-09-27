@@ -46,16 +46,22 @@ module I18n
             require ::File.expand_path(path, ::File.dirname(config))
           end
 
-          [conf.delete("match-segment"), conf.delete("match-segments")].compact.flatten.each do |match_segment_conf|
-            next if match_segment_conf["Enabled"] == false
+          conf.delete("match-segment")&.each do |conf|
+            next if conf["Enabled"] == false
 
-            Registry.register_rule(Rules::BuiltIn::MatchSegment, match_segment_conf)
+            Registry.register_rule(Rules::BuiltIn::MatchSegment, conf)
           end
 
-          [conf.delete("match-file"), conf.delete("match-files")].compact.flatten.each do |match_file_conf|
-            next if match_file_conf["Enabled"] == false
+          conf.delete("match-file")&.each do |conf|
+            next if conf["Enabled"] == false
 
-            Registry.register_rule(Rules::BuiltIn::MatchFile, match_file_conf)
+            Registry.register_rule(Rules::BuiltIn::MatchFile, conf)
+          end
+
+          conf.delete("match-segment-to-source")&.each do |conf|
+            next if conf["Enabled"] == false
+
+            Registry.register_rule(Rules::BuiltIn::MatchSegmentToSource, conf)
           end
 
           Rule.subclasses.each do |rule_class|
@@ -88,7 +94,10 @@ module I18n
         linter = Linter.new(filepaths: ARGV, source_locale:)
         puts "Inspecting #{linter.num_files} files"
         linter.tick_each_file { |num_offences| print num_offences.zero? ? "." : "F" }
+        linter.tick_each_comparison { |num_offences| print num_offences.zero? ? "." : "F" }
         linter.run
+        puts "\nComparing segments to source #{source_locale}"
+        linter.run_comparison
 
         if linter.offences.empty?
           puts "\n\nNo offences detected\n\n"
@@ -102,6 +111,10 @@ module I18n
           message = " - #{o.message}" if o.message
           source = "\n  #{o.source.chomp.gsub("\n", "\n  ")}" if o.source
           puts "\n#{file_info}#{segment_info}: #{o.rule}#{message}#{source}"
+          next unless (o = o.source_offence)
+
+          source = "\n  #{o.source.chomp.gsub("\n", "\n  ")}"
+          puts "#{o.filepath}#{":#{o.lineno}" if o.lineno} in #{o.locale}.#{o.key}:#{source}"
         end
         puts "\n#{linter.offences.size} offences detected"
         exit 1

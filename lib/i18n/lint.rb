@@ -13,6 +13,7 @@ module I18n
     def self.lint(filepaths, source_locale: nil)
       linter = Linter.new(filepaths:, source_locale:)
       linter.run
+      linter.run_comparison
       linter.offences.empty? || linter.offences
     end
 

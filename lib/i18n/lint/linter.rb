@@ -19,24 +19,34 @@ module I18n
       end
 
       def tick_each_file(&block)
-        @tick_each_file =
-          if block.arity.zero?
-            ->(_no_offences) { block.call }
-          else
-            block
-          end
+        @tick_each_file = make_tick_proc(block)
+      end
+
+      def tick_each_comparison(&block)
+        @tick_each_comparison = make_tick_proc(block)
       end
 
       def run
-        @segment_keys_per_file_locale = new_hash_array_three_levels
         @enum.each_file do |i18n_file|
-          new_offences_count = Registry.rules.reject { _1.excluded?(i18n_file.filepath) }.sum do |rule|
-            run_file(i18n_file, rule)
+          tick(@tick_each_file, Registry.rules.sum do |rule|
+            next 0 if rule.excluded?(i18n_file.filepath)
+
+            rule.on_file(i18n_file.clone)
+            @enum.each_segment(file: i18n_file) { |segment| rule.on_segment(segment.clone) }
             rule.take_offences.tap { offences.concat(_1) }.size
-          end
-          tick(new_offences_count)
+          end)
         end
-        self
+      end
+
+      def run_comparison
+        each_segment_comparison do |segment, source_segment|
+          tick(@tick_each_comparison, Registry.rules.sum do |rule|
+            next 0 if rule.excluded?(segment.file.filepath)
+
+            rule.on_segment_comparison(segment.clone, source_segment.clone)
+            rule.take_offences.tap { offences.concat(_1) }.size
+          end)
+        end
       end
 
       def each_file(&)
@@ -47,44 +57,87 @@ module I18n
         @enum.each_segment(&)
       end
 
+      def each_segment_comparison(&)
+        comparisons = ComparisonMap.new(source_locale)
+        # Slurp all the files first, so we can separate the source segments from translation segments.
+        @enum.each_segment do |segment|
+          comparisons.add(segment)
+        end
+        comparisons.freeze
+        comparisons.each(&)
+      end
+
       private
 
-      def tick(num_offences)
-        return if @tick_each_file.nil?
+      def tick(block, num_offences)
+        return if block.nil?
 
-        @tick_each_file.call(num_offences)
+        block.call(num_offences)
       end
 
-      def run_file(i18n_file, rule)
-        rule.on_file(i18n_file.clone)
-        @enum.each_segment(file: i18n_file) do |segment|
-          @segment_keys_per_file_locale[i18n_file][segment.locale][segment.key] << segment
-          rule.on_segment(segment.clone)
-        end
-        each_segment_comparison(i18n_file) do |segment, source_segment|
-          rule.on_segment_comparison(segment.clone, source_segment.clone)
+      def make_tick_proc(block)
+        if block.arity.zero?
+          ->(_num_offences) { block.call }
+        else
+          block
         end
       end
 
-      def each_segment_comparison(file)
-        @segment_keys_per_file_locale[file].except(source_locale).each_value do |segments_per_key|
-          segments_per_key.each do |key, segments|
-            segments.each do |segment|
-              @segment_keys_per_file_locale[file][source_locale][key].each do |source_segment|
-                yield segment, source_segment
-              end
-            end
-          end
-        end
-      end
+      # Store segments then enumerate them compared to the source_locale.
+      class ComparisonMap
+        def initialize(source_locale)
+          @source_locale = source_locale
+          @hash = Hash.new do |h, k|
+            next if h.frozen?
 
-      def new_hash_array_three_levels
-        Hash.new do |h, k|
-          h[k] = Hash.new do |h, k|
             h[k] = Hash.new do |h, k|
+              next if h.frozen?
+
               h[k] = []
             end
           end
+        end
+
+        attr_reader :source_locale
+
+        include Enumerable
+
+        def each(&)
+          enum = ::Enumerator.new do |yielder|
+            each_segment do |segment|
+              each_source(segment.key) do |source_segment|
+                yielder << [segment, source_segment]
+              end
+            end
+          end
+          block_given? ? enum.each(&) : enum
+        end
+
+        def add(segment)
+          @hash[segment.locale][segment.key] << segment
+        end
+
+        def freeze
+          super
+          @hash.freeze
+          @hash.each_value do |level2|
+            level2.freeze
+            level2.each_value(&:freeze)
+          end
+        end
+
+        private
+
+        def each_segment(&)
+          @hash.except(source_locale).each_value do |per_key|
+            per_key.each_value do |segments|
+              segments.each(&)
+            end
+          end
+        end
+
+        def each_source(key, &)
+          @hash.dig(source_locale, key)&.each(&)
         end
       end
     end

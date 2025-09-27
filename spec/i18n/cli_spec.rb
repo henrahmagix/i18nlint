@@ -2,19 +2,29 @@
 
 require "i18n/lint/cli"
 
-RSpec.describe I18n::Lint::CLI do
-  let(:ignore_will_never_run_classes) do
-    %w[
-      TestClassRule
-    ]
+module DisableTestSubclassesToAvoidTestPolution
+  def inherited(base)
+    super
+    base.inherited_location = caller_locations(1, 1)[0].absolute_path
   end
 
+  attr_accessor :inherited_location
+
+  def test_class?
+    return false if inherited_location.nil? || inherited_location.include?("/spec/examples/")
+
+    inherited_location.match?(%r{^#{File.expand_path("..", __dir__)}/.*_spec\.rb$})
+  end
+end
+I18n::Lint::Rule.singleton_class.prepend DisableTestSubclassesToAvoidTestPolution
+
+RSpec.describe I18n::Lint::CLI do
   before do
-    allow(I18n::Lint::Registry).to receive(:register_rule).and_wrap_original do |m, *args, **kwargs, &block|
-      if args[0].name.to_s.empty? || ignore_will_never_run_classes.include?(args[0].name)
-        warn "Ignoring rule from other tests: #{args[0]}"
-      else
-        m.call(*args, **kwargs, &block)
+    allow(I18n::Lint::Rule).to receive(:subclasses).and_wrap_original do |m, *a, **kw, &b|
+      m.call(*a, **kw, &b).reject do |subclass|
+        subclass.test_class?.tap do |rejected|
+          warn "Ignoring rule from other tests: #{subclass.name || "<no name>"}/#{subclass.inspect}" if rejected
+        end
       end
     end
   end
@@ -24,8 +34,10 @@ RSpec.describe I18n::Lint::CLI do
     expect { described_class.run }
       .to raise_error(SystemExit) { _1.status == 1 }
       .and output(<<~OUT).to_stdout
-        Inspecting 5 files
-        F.F.F
+        Inspecting 7 files
+        F.F.F..
+        Comparing segments to source en
+        ...F
 
         Offences:
 
@@ -42,7 +54,12 @@ RSpec.describe I18n::Lint::CLI do
         spec/examples/cli/locales/fr.yml:5: BuiltIn/MatchFile /German/i
             i_am_a_german_key: 'Was gehn der alter?'
 
-        4 offences detected
+        spec/examples/cli/locales/raise_brackets_comparison.yml:4 in fr.brackets2: BuiltIn/MatchSegmentToSource /\\[[A-Z_]+\\]/ - [YOUR_TAG] found 0 times, but should be 1
+          et ca c'est your tag
+        spec/examples/cli/locales/raise_brackets_comparison.yml:2 in en.brackets2:
+          and that is [YOUR_TAG]
+
+        5 offences detected
       OUT
   end
 end

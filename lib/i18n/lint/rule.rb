@@ -3,7 +3,10 @@
 module I18n
   module Lint
     # A registered offence as reported by a rule.
-    Offence = Struct.new(:rule, :filepath, :lineno, :locale, :key, :source, :message)
+    Offence = Struct.new(:rule, :filepath, :lineno, :locale, :key, :source, :message) do
+      def source_offence = nil
+    end
+    CompareOffence = Struct.new(*Offence.members, :source_offence)
 
     # Base class for Class rule types.
     class Rule
@@ -53,24 +56,22 @@ module I18n
         @offences << Offence.new(
           describe,
           file.filepath,
-          lineno, # line
-          locale, # locale
+          lineno,
+          locale,
           nil, # key
           source, # don't print the whole file contents in the offence
           make_message(message)
         )
       end
 
-      def add_segment_offence(segment, message)
-        @offences << Offence.new(
-          describe,
-          segment.filepath,
-          segment.lineno,
-          segment.locale,
-          segment.key,
-          segment.text,
-          make_message(message)
-        )
+      def add_segment_offence(segment, message = nil)
+        @offences << make_segment_offence(describe, segment, make_message(message))
+      end
+
+      def add_segment_compare_offence(segment, source_segment, message = nil)
+        @offences << make_segment_offence(describe, segment, make_message(message), CompareOffence).tap do |offence|
+          offence.source_offence = make_segment_offence(nil, source_segment, nil)
+        end
       end
 
       def take_offences
@@ -80,6 +81,18 @@ module I18n
       end
 
       private
+
+      def make_segment_offence(describe, segment, message = nil, offence_class = Offence)
+        offence_class.new(
+          describe,
+          segment.filepath,
+          segment.lineno,
+          segment.locale,
+          segment.key,
+          segment.text,
+          message
+        )
+      end
 
       def make_message(message)
         message ||= config["Message"]

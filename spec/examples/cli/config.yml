@@ -6,10 +6,15 @@ MyScope/NoComments:
   AllowedPatterns:
     - '^NOTE: '
 
-match-segments:
+match-segment:
   - Pattern: wef
     Exclude:
       - '*_wef.yml'
+
+match-segment-to-source:
+  - Pattern: '\[[A-Z_]+\]'
+    Exclude:
+      - '*ignore_brackets_comparison.yml'
 
 match-file:
   - Pattern: German

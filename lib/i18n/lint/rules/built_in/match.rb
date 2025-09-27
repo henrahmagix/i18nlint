@@ -33,6 +33,47 @@ module I18n
           end
         end
 
+        # Report when a Regexp pattern matches against an individual segment.
+        class MatchSegmentToSource < Rule
+          include MatchPattern
+
+          def on_segment_comparison(segment, source_segment)
+            return unless pattern
+
+            trans = segment.text.scan(pattern) # 🏳️‍⚧️🏳️‍🌈🫶
+            source = source_segment.text.scan(pattern)
+
+            each_mismatch(trans, source) do |match, trans_count, source_count|
+              add_segment_compare_offence(
+                segment,
+                source_segment,
+                "#{match} found #{trans_count} #{trans_count == 1 ? "time" : "times"}, but should be #{source_count}"
+              )
+            end
+          end
+
+          private
+
+          def each_mismatch(trans, source)
+            trans.delete_if do |match|
+              if (i = source.find_index(match))
+                source.delete_at(i)
+                next true
+              end
+            end
+
+            trans_tally = trans.tally
+            source_tally = source.tally
+
+            trans_tally.each { |match, count| yield match, count, source_tally[match] || 0 }
+            source_tally.each { |match, count| yield match, trans_tally[match] || 0, count }
+          end
+
+          def plural_count(count)
+            count == 1 ? "#{count} time" : "#{count} times"
+          end
+        end
+
         # Report when a Regexp pattern matches against a whole YAML file.
         class MatchFile < Rule
           include MatchPattern
