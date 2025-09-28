@@ -1,0 +1,48 @@
+# this is a comment
+lower: lowercase
+UPPER: UPPERCASE
+no: this is false
+'no': norwegian
+
+map_alias: &map
+  some_array: [1, 2, 3]
+  some_sequence:
+    - a
+    - b
+  some_hash: {c: 'c', d: 'd'}
+  some_map:
+    e: 'e'
+    f: 'f'
+map_copied: *map
+map_extended:
+  <<: *map
+  nested_sequence:
+    - a: a
+      b: b
+    - a: 1
+      b: 2
+
+map_alias_2: &map_2
+  foo: bar
+map_copied_2: {1: *map, 2: *map_2}
+map_extended_2:
+  <<: {1: *map, 2: *map_2}
+  extra: hello
+
+sequence_alias: &sequence
+  - a
+  - b
+sequence_copied: *sequence
+sequence_extended:
+  - *sequence # this doesn't produce the structure you expect, but it lets us test YamlWithLines
+  - c
+
+sequence_alias_2: &sequence_2
+  - c
+  - d
+sequence_copied_2: [*sequence, *sequence_2]
+sequence_extended_2:
+  <<: [*sequence, *sequence_2]
+
+string_double_left_arrow:
+  <<: "hello"

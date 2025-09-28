@@ -20,6 +20,8 @@ module I18nLint
         val.each { |each_key, each_val| walk(each_val, key_parts + [each_key], &) }
       when Enumerable
         val.each_with_index { |each_val, each_key| walk(each_val, key_parts + [each_key], &) }
+      else
+        yield key_parts, val
       end
     end
   end
@@ -69,7 +71,7 @@ class Psych::Visitors::ToRubyWithLineNumbers < Psych::Visitors::ToRuby # rubocop
 
   private
 
-  def revive_hash(hash, node) # rubocop:disable Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity,Metrics/AbcSize,Metrics/MethodLength
+  def revive_hash(hash, node, tagged = false) # rubocop:disable Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity,Metrics/AbcSize,Metrics/MethodLength,Style/OptionalBooleanParameter
     node.children.each_slice(2) do |k, v| # rubocop:disable Metrics/BlockLength
       key = accept(k)
       val = accept(v)
@@ -103,6 +105,12 @@ class Psych::Visitors::ToRubyWithLineNumbers < Psych::Visitors::ToRuby # rubocop
           hash[key] = val
         end
       else
+        if !tagged && @symbolize_names && key.is_a?(String)
+          key = key.to_sym
+        elsif !@freeze
+          key = deduplicate(key)
+        end
+
         hash[key] = val
       end
     end
