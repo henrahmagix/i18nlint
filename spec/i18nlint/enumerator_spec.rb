@@ -23,6 +23,23 @@ RSpec.describe I18nLint::Enumerator do
       .to match_array %w[en:one en:nested.one fr:one fr:nested.one de:one de:nested.one es:one es:nested.one]
   end
 
+  it "each segment can say if it's the source locale" do
+    instance = described_class.new(examples_dir.join("enumerator/*.yml"), source_locale: "en")
+
+    expect(instance.each_segment.map { |segment| "#{segment.locale}:#{segment.key}:#{segment.source?}" })
+      .to match_array %w[en:one:true en:nested.one:true fr:one:false fr:nested.one:false
+                         de:one:false de:nested.one:false es:one:false es:nested.one:false]
+  end
+
+  define_negated_matcher :not_raise_error, :raise_error
+  define_negated_matcher :not_output, :output
+
+  it "ignores filepaths that don't exist" do
+    expect { described_class.new([examples_dir.join("enumerator/*.yml"), "foo.yml"], source_locale: "FR") }
+      .to not_output.to_stderr
+      .and not_raise_error
+  end
+
   describe "file reading and parsing" do
     def capture_method_calls(object, method)
       calls = []

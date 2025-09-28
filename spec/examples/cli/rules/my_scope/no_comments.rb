@@ -30,7 +30,7 @@ module MyScope
       end
     end
 
-    on_init { @allowed_patterns = config["AllowedPatterns"]&.map { Regexp.new(_1) } }
+    on_init { @allowed_patterns = config["AllowedPatterns"]&.map { Regexp.new(_1) } || [] }
     attr_reader :allowed_patterns
 
     def description

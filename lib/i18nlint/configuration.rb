@@ -1,22 +1,29 @@
 # frozen_string_literal: true
 
 module I18nLint
-  # A single error wrapping multiple error messages without their stacktraces. Should only be used for printing.
-  class ConfigurationProblems < Error
-    def initialize(errors)
-      super(errors.map(&:message).join("\n"))
+  # Central store of which locale is the source (only useful for comparative rules) and loading + registering rules.
+  class Configuration
+    def initialize(source_locale: "", rule_options: {}, requires: [])
+      @source_locale = source_locale.upcase
+      @rule_options = rule_options
+      @requires = requires
     end
-  end
 
-  Configuration = Struct.new(:source_locale, :requires, :rule_options, keyword_init: true) do
     def load_from_argv_and_file!
       parse_argv
-      self.rule_options = load_rule_options_from_file
-      self.requires = rule_options.delete("require")
+      @rule_options.merge!(load_rule_options_from_file)
+      @requires += rule_options.delete("require") || []
       @remaining_rule_options = rule_options.dup
     end
 
-    attr_reader :help, :config_file_does_not_exist, :remaining_rule_options
+    def on_problems(&block)
+      @on_problems = block
+    end
+
+    def help = @parser.help
+
+    attr_reader :source_locale, :requires, :rule_options,
+                :config_file_does_not_exist, :remaining_rule_options
 
     def register_rules!
       require_relative_from = ::File.dirname(config_filepath || Dir.pwd)
@@ -29,23 +36,23 @@ module I18nLint
       register_built_in("match-segment-to-source", Rules::BuiltIn::MatchSegmentToSource)
 
       problems = register_rule_subclasses
-      raise ConfigurationProblems, problems unless problems.empty?
+      problems.each { @on_problems.call(_1) } if @on_problems
     end
 
     private
 
     def parse_argv
-      parser = OptionParser.new do |parser|
+      @parser = OptionParser.new do |parser|
         parser.banner = "Usage: i18nlint files... --source=LOCALE --config=path/to/.i18nlint.yml"
 
         parser.on("--source=LOCALE", "The locale to configure segment comparisons against source.") do |v|
-          self.source_locale = v
+          @source_locale = v.upcase
         end
         parser.on("--config=CONFIG", "The configuration of rules.") do |v|
+          warn "Ignoring --config=#{@config_filepath}" if @config_filepath
           @config_filepath = v
         end
       end.tap(&:parse!)
-      @help = parser.help
     end
 
     def config_filepath
@@ -56,7 +63,7 @@ module I18nLint
     end
 
     def load_rule_options_from_file
-      return if config_filepath.nil?
+      return {} if config_filepath.nil?
 
       ::YAML.safe_load_file(config_filepath)
     rescue ::Errno::ENOENT
@@ -66,22 +73,22 @@ module I18nLint
 
     def register_built_in(key, klass)
       @remaining_rule_options.delete(key)&.each do |conf|
-        register_from_require_options(conf, klass)
+        register_from_options(conf, klass)
       end
     end
 
-    def register_from_require_options(conf, klass)
+    def register_from_options(conf, klass)
       enabled = conf.delete("Enabled")
       enabled = klass.enabled_by_default? if enabled.nil?
       Registry.register_rule(klass, conf) if enabled
     end
 
     def register_rule_subclasses
-      Rule.subclasses.filter_map do |klass|
+      Rule.subclasses.reject { _1.name.start_with?(Rules::BuiltIn.name) }.filter_map do |klass|
         conf = {}
         conf.merge! @remaining_rule_options.delete(klass.rule_key) || {} if klass.rule_key
 
-        register_from_require_options(conf, klass)
+        register_from_options(conf, klass)
         nil
       rescue RuleTypes::ClassRule::WillNeverRun => e
         e unless klass.rule_key.empty?

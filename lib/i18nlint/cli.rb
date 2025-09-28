@@ -15,9 +15,11 @@ module I18nLint
 
     def run # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
       conf = Configuration.new.tap do |conf|
+        conf.on_problems { |e| warn e.message }
+
         conf.load_from_argv_and_file!
 
-        if conf.source_locale.nil?
+        if conf.source_locale.to_s.empty?
           warn conf.help
           exit 1
         end
@@ -35,11 +37,15 @@ module I18nLint
                "list, or it doesn't subclass I18nLint::Rule."
           warn
         end
-      rescue ConfigurationProblems => e
-        warn e.message
       end
 
       linter = Linter.new(filepaths: ARGV, source_locale: conf.source_locale)
+
+      if [linter.num_files, Registry.rules.size].min.zero?
+        puts "No files given or rules configured"
+        exit 0
+      end
+
       tick = ->(num_offences) { print num_offences.zero? ? "." : "F" }
       linter.tick_each_file(&tick)
       linter.tick_each_comparison(&tick)
@@ -54,7 +60,6 @@ module I18nLint
 
       if linter.offences.empty?
         puts "No offences detected"
-        puts
         exit 0
       end
 

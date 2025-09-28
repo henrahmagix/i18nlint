@@ -128,7 +128,7 @@ module I18nLint
       private
 
       def each_segment(&)
-        @hash.except(source_locale).each_value do |per_key|
+        @hash.except(source_locale.upcase, source_locale.downcase).each_value do |per_key|
           per_key.each_value do |segments|
             segments.each(&)
           end
@@ -136,7 +136,8 @@ module I18nLint
       end
 
       def each_source(key, &)
-        @hash.dig(source_locale, key)&.each(&)
+        @hash.dig(source_locale.upcase, key)&.each(&)
+        @hash.dig(source_locale.downcase, key)&.each(&)
       end
     end
   end

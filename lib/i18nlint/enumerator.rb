@@ -66,9 +66,6 @@ module I18nLint
 
     def read_file(filepath)
       ::File.read(filepath)
-    rescue Errno::ENOENT
-      warn "cannot read file: #{filepath.inspect}"
-      nil
     end
 
     def parse_yaml(yaml, filepath:)
@@ -81,14 +78,6 @@ module I18nLint
         YamlWithLines.walk(doc) do |(locale, *key_parts), text, line_start, line_end|
           yield locale, key_parts.join("."), text, line_start, line_end
         end
-      end
-    end
-
-    def walk_segments(key, val, &)
-      if val.is_a?(String) || val.nil?
-        yield key, val
-      else
-        val.each { |nested_key, nested_val| walk_segments("#{key}.#{nested_key}", nested_val, &) }
       end
     end
   end
