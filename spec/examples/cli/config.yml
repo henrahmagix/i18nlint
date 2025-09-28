@@ -10,17 +10,22 @@ match-segment:
   - Pattern: wef
     Exclude:
       - '*_wef.yml'
+  - HasNoPattern
 
 match-segment-to-source:
   - Pattern: '\[[A-Z_]+\]'
     Exclude:
       - '*ignore_brackets_comparison.yml'
+  - Pattern: '.*'
+    Enabled: false
+  - [BadConfig]
 
 match-file:
   - Pattern: German
     CaseSensitive: false
     Exclude:
       - '*de.yml'
+  - 0..2
 
 ThisWillNotBe/Used:
   Enabled: true

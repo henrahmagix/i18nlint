@@ -12,8 +12,8 @@ module I18nLint
     def load_from_argv_and_file!
       parse_argv
       @rule_options.merge!(load_rule_options_from_file)
-      @requires += rule_options.delete("require") || []
       @remaining_rule_options = rule_options.dup
+      @requires += @remaining_rule_options.delete("require") || []
     end
 
     def on_problems(&block)

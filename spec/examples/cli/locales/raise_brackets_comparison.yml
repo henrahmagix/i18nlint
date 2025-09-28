@@ -1,4 +1,8 @@
 en:
-  brackets2: "and that is [YOUR_TAG]"
+  brackets2: |
+    and that is [YOUR_TAG]
+    for [YOUR_NAME]
 fr:
-  brackets2: "et ca c'est your tag"
+  brackets2: |
+    et ca c'est [VOTRE_TAG]
+    pour [YOUR_NAME]

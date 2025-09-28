@@ -76,6 +76,13 @@ RSpec.describe I18nLint::CLI do
       .and output("No files given or rules configured\n").to_stdout
   end
 
+  it "warns about multiple --config arguments" do
+    stub_const "::ARGV", ["--source=fr", "--config=foo", "--config=spec/examples/cli/config.yml"]
+    expect { described_class.run }
+      .to system_exit(0)
+      .and output(include("Ignoring --config=foo")).to_stderr
+  end
+
   context "with spec/example rules allowed" do
     let(:allow_examples_directory) { true }
 
@@ -127,13 +134,23 @@ RSpec.describe I18nLint::CLI do
               i_am_a_german_key: 'Was gehn der alter?'
                      ^^^^^^
 
-          spec/examples/cli/locales/raise_brackets_comparison.yml:4 in fr.brackets2: BuiltIn/MatchSegmentToSource /\\[[A-Z_]+\\]/ - [YOUR_TAG] found 0 times, but should be 1
-            et ca c'est your tag
+          spec/examples/cli/locales/raise_brackets_comparison.yml:6 in fr.brackets2: BuiltIn/MatchSegmentToSource /\\[[A-Z_]+\\]/ - [VOTRE_TAG] found 1 time, but should be 0
+            et ca c'est [VOTRE_TAG]
+                        ^^^^^^^^^^^
+            pour [YOUR_NAME]
+          spec/examples/cli/locales/raise_brackets_comparison.yml:2 in en.brackets2:
+            and that is [YOUR_TAG]
+            for [YOUR_NAME]
+
+          spec/examples/cli/locales/raise_brackets_comparison.yml:6 in fr.brackets2: BuiltIn/MatchSegmentToSource /\\[[A-Z_]+\\]/ - [YOUR_TAG] found 0 times, but should be 1
+            et ca c'est [VOTRE_TAG]
+            pour [YOUR_NAME]
           spec/examples/cli/locales/raise_brackets_comparison.yml:2 in en.brackets2:
             and that is [YOUR_TAG]
                         ^^^^^^^^^^
+            for [YOUR_NAME]
 
-          5 offences detected
+          6 offences detected
         OUT
     end
   end

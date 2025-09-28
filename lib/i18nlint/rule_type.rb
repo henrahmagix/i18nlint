@@ -9,7 +9,7 @@ module I18nLint
 
     def initialize(object, config = {})
       @rule = Rule.new(object, config)
-      @exclude = Array(config["Exclude"])
+      @exclude = Array((config["Exclude"] if config.is_a?(Hash)))
     end
 
     def excluded?(filepath)

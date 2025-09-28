@@ -7,7 +7,7 @@ module I18nLint
       module MatchPattern
         def self.included(base)
           base.on_init do
-            next unless config["Pattern"]
+            next unless config.is_a?(Hash) && config["Pattern"]
 
             options = Regexp::IGNORECASE if config["CaseSensitive"] == false
             @pattern = Regexp.new(config["Pattern"], options)
@@ -89,10 +89,6 @@ module I18nLint
         end
         Mismatch = Struct.new(:match, :actual_count, :expected_count, :highlight, :source_highlight)
         private_constant :Mismatch
-
-        def plural_count(count)
-          count == 1 ? "#{count} time" : "#{count} times"
-        end
       end
 
       # Report when a Regexp pattern matches against a whole YAML file.
