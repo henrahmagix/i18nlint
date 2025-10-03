@@ -4,6 +4,11 @@ require "i18nlint/highlighters/below_line"
 
 RSpec.describe I18nLint::Highlighters::BelowLine do
   describe ".indicate" do
+    it "raises error for bad slices" do
+      expect { described_class.indicate("", [1]) }
+        .to raise_error(ArgumentError, "must be given 1 or more tuples of Integer, but was called with [[1]]")
+    end
+
     it "adds ^ indicators on the line below the given char positions" do
       text = "hello world"
       slices = [[5, 6]]

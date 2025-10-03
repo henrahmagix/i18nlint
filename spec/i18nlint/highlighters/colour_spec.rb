@@ -4,6 +4,11 @@ require "i18nlint/highlighters/colour"
 
 RSpec.describe I18nLint::Highlighters::Colour do
   describe ".indicate" do
+    it "raises error for bad slices" do
+      expect { described_class.indicate("", "wef") }
+        .to raise_error(ArgumentError, "must be given 1 or more tuples of Integer, but was called with [\"wef\"]")
+    end
+
     it "colours the given char positions" do
       text = "hello world"
       slices = [[5, 6]]

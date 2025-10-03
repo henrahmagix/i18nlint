@@ -30,7 +30,7 @@ module I18nLint
         def ensure_tuples_of(type, *objects)
           return if objects.all? { _1.is_a?(Array) && _1.map(&:class) == [type, type] }
 
-          raise ArgumentError, "must be given 1 or more tuples of #{type}, but was called with #{arrays.inspect}"
+          raise ArgumentError, "must be given 1 or more tuples of #{type}, but was called with #{objects.inspect}"
         end
       end
     end
