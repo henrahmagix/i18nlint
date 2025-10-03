@@ -127,10 +127,10 @@ module I18nLint
 
       private
 
-      def each_segment(&)
+      def each_segment(&block)
         @hash.except(source_locale.upcase, source_locale.downcase).each_value do |per_key|
           per_key.each_value do |segments|
-            segments.each(&)
+            segments.each(&block)
           end
         end
       end
