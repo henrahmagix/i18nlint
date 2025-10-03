@@ -12,7 +12,9 @@ module I18nLint
 
   # Base class for Class rule types.
   class Rule
-    attr_reader :input, :config
+    attr_reader :config, :message
+
+    @rule_classes = []
 
     class << self
       def enabled_by_default? = @enable_by_default.nil? || @enable_by_default
@@ -29,24 +31,37 @@ module I18nLint
       def rule_key
         name.to_s.gsub(/^(::)?I18nLint::Rules?::/, "").gsub("::", "/")
       end
+
+      attr_reader :rule_classes
+
+      def inherited(rule_class)
+        rule_classes << rule_class
+        super
+      end
     end
 
-    def initialize(input, config = {})
-      @input = input
+    def initialize(config = {})
       @config = config
+      @message = config["Message"] if config.is_a?(Hash)
       @offences = []
+
+      @exclude = Array((config["Exclude"] if config.is_a?(Hash)))
+      @always_include = @exclude.empty?
 
       self.class.on_init_blocks.each { |b| instance_exec(&b) }
     end
 
     def describe
-      class_desc = " #{description}" if respond_to?(:description) && description
-      rule_desc = " #{input.description}" if input.respond_to?(:description) && input.description
-      "#{self.class.rule_key}#{class_desc}#{rule_desc}"
+      desc = " #{description}" if respond_to?(:description) && description
+      desc ||= " #{self.class.description}" if self.class.respond_to?(:description) && self.class.description
+      "#{self.class.rule_key}#{desc}"
     end
 
-    def message
-      config["Message"]
+    def excluded?(filepath)
+      return false if @always_include
+
+      path = Pathname.new(filepath)
+      @exclude.any? { |dir_pattern| path.fnmatch(dir_pattern) }
     end
 
     def add_offence(item, message = nil)

@@ -3,34 +3,50 @@
 module I18nLint
   # Collect rules.
   class Registry
-    @rule_types = {}
     @rules = []
 
+    LINT_METHODS = %i[
+      on_file
+      on_segment
+      on_segment_comparison
+    ].freeze
+    private_constant :LINT_METHODS
+
+    # Avoid custom rules that will never get used.
+    class WillNeverRun < StandardError
+      attr_reader :rule_class
+
+      def initialize(instance)
+        @rule_class = instance.class
+        super("Rule #{rule_class} will never be used: it must respond to at least one of " \
+              "#{LINT_METHODS.map(&:inspect).join(", ")}")
+      end
+    end
+
     class << self
-      attr_reader :rule_types, :rules
+      attr_reader :rules
 
-      def register_rule_type(rule_type)
-        unless rule_type.const_defined?(:TYPE)
-          raise ArgumentError, "incomatible rule type class, #{rule_type} must implement ::TYPE"
-        end
-
-        type = rule_type::TYPE
-
-        if (existing = rule_types[type])
-          warn "#{name}.#{__method__}: #{existing} will no longer be used for #{type}; #{rule_type} is replacing it"
-        end
-        rule_types[type] = rule_type
+      def register_rule(rule_class, config = {})
+        rule = rule_class.new(config)
+        enforce_rule_shape(rule)
+        rules << rule
+        rule
       end
 
-      def register_rule(rule, config = {})
-        if (rule_type = rule_types[rule.class])
-          rule = rule_type.new(rule, config)
-          rules << rule
-          rule
-        else
-          raise ArgumentError, "unknown rule type: call #{name}.register_rule_type with a RuleType class that has " \
-                               "TYPE = #{rule.class}"
+      private
+
+      def enforce_rule_shape(rule)
+        has_methods = false
+        LINT_METHODS.each do |m|
+          if rule.respond_to?(m)
+            has_methods = true
+            next
+          end
+
+          rule.singleton_class.define_method(m) { |*| nil }
         end
+
+        raise WillNeverRun, rule unless has_methods
       end
     end
   end

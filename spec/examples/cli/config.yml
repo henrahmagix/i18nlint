@@ -1,5 +1,6 @@
 require:
   - ./rules/my_scope/no_comments
+  - ./rules/will_never_run
 
 MyScope/NoComments:
   Enabled: true

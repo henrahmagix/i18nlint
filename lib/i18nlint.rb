@@ -5,7 +5,6 @@ require_relative "i18nlint/error"
 require_relative "i18nlint/configuration"
 require_relative "i18nlint/linter"
 require_relative "i18nlint/registry"
-require_relative "i18nlint/rule_type"
 require_relative "i18nlint/rule"
 require_relative "i18nlint/enumerator"
 
@@ -20,16 +19,6 @@ module I18nLint
 
   def self.register_rule(rule)
     Registry.register_rule(rule)
-  end
-
-  def self.register_rule_type(rule_type)
-    Registry.register_rule_type(rule_type)
-  end
-
-  # How to process a rule based on the type of the rule.
-  module RuleTypes
-    require_relative "i18nlint/rule_types/class_rule"
-    Registry.register_rule_type(ClassRule)
   end
 
   # Basic set of rules.

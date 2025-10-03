@@ -2,38 +2,7 @@
 
 require "i18nlint/cli"
 
-module DisableTestSubclassesToAvoidTestPolution
-  def inherited(base)
-    super
-    base.inherited_location = caller_locations(1, 1)[0].absolute_path
-  end
-
-  attr_accessor :inherited_location
-
-  def test_class?(allow_examples_directory:)
-    return false if inherited_location.nil?
-    return false if allow_examples_directory && inherited_location.include?("/spec/examples/")
-
-    inherited_location.start_with?(File.expand_path("..", __dir__))
-  end
-end
-I18nLint::Rule.singleton_class.prepend DisableTestSubclassesToAvoidTestPolution
-
 RSpec.describe I18nLint::CLI do
-  let(:allow_examples_directory) { false }
-
-  before do
-    stderr_uncaptured = $stderr
-    allow(I18nLint::Rule).to receive(:subclasses).and_wrap_original do |m, *a, **kw, &b|
-      m.call(*a, **kw, &b).reject do |subclass|
-        if subclass.test_class?(allow_examples_directory:)
-          stderr_uncaptured.puts "Ignoring rule #{subclass.name || subclass.inspect} at #{subclass.inherited_location}"
-          true
-        end
-      end
-    end
-  end
-
   around do |example|
     example.run
   rescue SystemExit
@@ -41,7 +10,7 @@ RSpec.describe I18nLint::CLI do
   end
 
   def match_on_one_line(*parts)
-    include(/#{parts.join(".*")}/)
+    include(/#{parts.map { Regexp.escape(_1) }.join(".*")}/)
   end
 
   def system_exit(expected_status)
@@ -76,10 +45,12 @@ RSpec.describe I18nLint::CLI do
   end
 
   it "exits 0 when no rules are defined" do
+    allow(I18nLint::Rule).to receive(:rule_classes).and_return []
     stub_const "::ARGV", ["--source=fr", "spec/examples/**/*.yml"]
     expect { described_class.run }
       .to system_exit(0)
       .and output("No files given or rules configured\n").to_stdout
+      .and output(anything).to_stderr # suppress
   end
 
   it "warns about multiple --config arguments" do
@@ -87,70 +58,92 @@ RSpec.describe I18nLint::CLI do
     expect { described_class.run }
       .to system_exit(0)
       .and output(include("Ignoring --config=foo")).to_stderr
+      .and output(anything).to_stdout # suppress
   end
 
   context "with spec/example rules allowed" do
-    let(:allow_examples_directory) { true }
+    ignore_test_rules except: "**/spec/examples/**/*"
 
-    it "exits 0 without any offences" do
-      stub_const "ARGV", ["--source=pl", "--config=spec/examples/cli/config.yml", "spec/examples/cli/locales/good.yml"]
-      expect { described_class.run }
-        .to system_exit(0)
-        .and output(<<~OUT).to_stdout
-          Inspecting 1 files
-          .
-          Comparing segments to source PL
-
-
-          No offences detected
-        OUT
+    before do
+      stub_const "ARGV", ["--source", source, "--config=spec/examples/cli/config.yml", *Array(files)]
     end
 
-    it "prints the offences and exits 0" do
-      stub_const "::ARGV", ["--source=en", "--config=spec/examples/cli/config.yml", "spec/examples/cli/locales/*.yml"]
-      expect { described_class.run }
-        .to system_exit(1)
-        .and output(
-          match_on_one_line(
-            'Unused configuration "ThisWillNotBe/Used" expects class ThisWillNotBe::Used',
-            "hasn't been loaded",
-            "doesn't subclass I18nLint::Rule"
-          )
-        ).to_stderr
-        .and output(<<~OUT).to_stdout
-          Inspecting 8 files
-          F.F.F...
-          Comparing segments to source EN
-          ...F
+    context "without any offending I18n" do
+      let(:source) { "pl" }
+      let(:files) { "spec/examples/cli/locales/good.yml" }
 
-          Offences:
+      it "exits 0 without any offences" do
+        expect { described_class.run }
+          .to system_exit(0)
+          .and output(anything).to_stderr # suppress
+          .and output(<<~OUT).to_stdout
+            Inspecting 1 files
+            .
+            Comparing segments to source PL
 
-          spec/examples/cli/locales/comments.yml:4: MyScope/NoComments with AllowedPatterns: /^NOTE: /
-            # This is not allowed.
-            # It is a block comment that is not allowed.
 
-          spec/examples/cli/locales/comments.yml:7: MyScope/NoComments with AllowedPatterns: /^NOTE: /
-            # This single line is not allowed.
+            No offences detected
+          OUT
+      end
+    end
 
-          spec/examples/cli/locales/en.yml:4 in en.causes_offence: match-segment /wef/
-            This has wef in it!
-                     ^^^
+    context "with offending I18n" do
+      let(:source) { "en" }
+      let(:files) { "spec/examples/cli/locales/*.yml" }
 
-          spec/examples/cli/locales/fr.yml:5: match-file /German/i
-              i_am_a_german_key: 'Was gehn der alter?'
-                     ^^^^^^
+      it "prints the offences and exits 0" do
+        expect { described_class.run }
+          .to system_exit(1)
+          .and output(anything).to_stderr # suppress for this test
+          .and output(<<~OUT).to_stdout
+            Inspecting 8 files
+            F.F.F...
+            Comparing segments to source EN
+            ...F
 
-          spec/examples/cli/locales/raise_brackets_comparison.yml:6 in fr.brackets2: mismatch-to-source /\\[[A-Z_]+\\]/: Found mismatches to the source EN
-            et ca c'est [VOTRE_TAG]
-                        ^^^^^^^^^^^
-            pour [YOUR_NAME]
-          spec/examples/cli/locales/raise_brackets_comparison.yml:2 in en.brackets2
-            and that is [YOUR_TAG]
-                        ^^^^^^^^^^
-            for [YOUR_NAME]
+            Offences:
 
-          5 offences detected
-        OUT
+            spec/examples/cli/locales/comments.yml:4: MyScope/NoComments with AllowedPatterns: /^NOTE: /
+              # This is not allowed.
+              # It is a block comment that is not allowed.
+
+            spec/examples/cli/locales/comments.yml:7: MyScope/NoComments with AllowedPatterns: /^NOTE: /
+              # This single line is not allowed.
+
+            spec/examples/cli/locales/en.yml:4 in en.causes_offence: match-segment /wef/
+              This has wef in it!
+                       ^^^
+
+            spec/examples/cli/locales/fr.yml:5: match-file /German/i
+                i_am_a_german_key: 'Was gehn der alter?'
+                       ^^^^^^
+
+            spec/examples/cli/locales/raise_brackets_comparison.yml:6 in fr.brackets2: mismatch-to-source /\\[[A-Z_]+\\]/: Found mismatches to the source EN
+              et ca c'est [VOTRE_TAG]
+                          ^^^^^^^^^^^
+              pour [YOUR_NAME]
+            spec/examples/cli/locales/raise_brackets_comparison.yml:2 in en.brackets2
+              and that is [YOUR_TAG]
+                          ^^^^^^^^^^
+              for [YOUR_NAME]
+
+            5 offences detected
+          OUT
+      end
+
+      it "warns about unused rules and configuration, and any unhandled I18nLint::Errors that occur" do
+        expect do
+          described_class.run
+        rescue SystemExit
+          nil
+        end
+        .to output(anything).to_stdout
+        .and output(<<~ERR).to_stderr # should exclude MissingName + MissingRuleKey; we assert on the whole output here
+          Rule BadImplementation will never be used: it must respond to at least one of :on_file, :on_segment, :on_segment_comparison
+          uh oh, i cannot initialize
+          Unused configuration "ThisWillNotBe/Used" expects class ThisWillNotBe::Used to subclass I18nLint::Rule. If this is a rule you're expecting to be used, that means it hasn't been loaded in the `require:` list, or it doesn't subclass I18nLint::Rule.
+        ERR
+      end
     end
   end
 end

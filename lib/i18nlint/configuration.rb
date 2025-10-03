@@ -69,10 +69,10 @@ module I18nLint
       {}
     end
 
-    def find_built_in = proc { _1.name.start_with?(Rules::BuiltIn.name) }
+    def find_built_in = proc { _1.name&.start_with?(Rules::BuiltIn.name) }
 
     def register_built_ins
-      Rule.subclasses.select(&find_built_in).each do |klass|
+      Rule.rule_classes.select(&find_built_in).each do |klass|
         @remaining_rule_options.delete(klass.rule_key)&.each do |conf|
           register_from_options(conf, klass)
         end
@@ -86,14 +86,14 @@ module I18nLint
     end
 
     def register_rule_subclasses
-      Rule.subclasses.reject(&find_built_in).filter_map do |klass|
+      Rule.rule_classes.reject(&find_built_in).filter_map do |klass|
         conf = @remaining_rule_options.delete(klass.rule_key) if klass.rule_key
         conf ||= {}
 
         register_from_options(conf, klass)
         nil
-      rescue RuleTypes::ClassRule::WillNeverRun => e
-        e unless klass.rule_key.empty?
+      rescue Registry::WillNeverRun => e
+        e unless klass.rule_key.to_s.empty?
       rescue Error => e
         e
       end

@@ -9,13 +9,7 @@ RSpec.describe I18nLint do
     test_rule_class = Class.new(I18nLint::Rule) do
       def on_segment(*); end
     end
-    expect(I18nLint.register_rule(test_rule_class)).to be_a(I18nLint::RuleType)
-  end
-
-  it "allows registering rule types" do
-    test_rule_type_class = Class.new(I18nLint::RuleType)
-    test_rule_type_class.const_set :TYPE, Array
-    expect(I18nLint.register_rule_type(test_rule_type_class)).to be(test_rule_type_class)
+    expect(I18nLint.register_rule(test_rule_class)).to be_a(test_rule_class)
   end
 
   context "with a class rule with a description" do
@@ -70,11 +64,18 @@ RSpec.describe I18nLint do
     end
   end
 
-  def contain_exactly_offences(*offences)
-    include(*offences).and have_attributes(size: offences.size)
-  end
-
   def match_offences(offences)
     contain_exactly_offences(*offences)
+  end
+
+  matcher :contain_exactly_offences do |*expected|
+    diffable
+
+    expected.sort_by!(&:inspect)
+
+    match do |actual|
+      actual.sort_by!(&:inspect)
+      actual == expected
+    end
   end
 end

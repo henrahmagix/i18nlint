@@ -32,7 +32,7 @@ module I18nLint
         conf.register_rules!
         conf.remaining_rule_options.each_key do |key|
           warn "Unused configuration #{key.inspect} expects class #{key.gsub("/", "::")} to subclass I18nLint::Rule. " \
-               "If this is a rule you're expecting to be used, that means it hasn't been loaded in the `require:`" \
+               "If this is a rule you're expecting to be used, that means it hasn't been loaded in the `require:` " \
                "list, or it doesn't subclass I18nLint::Rule."
           warn
         end
