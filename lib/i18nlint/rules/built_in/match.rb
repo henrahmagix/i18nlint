@@ -21,6 +21,8 @@ module I18nLint
 
       # Report when a Regexp pattern matches against an individual segment.
       class MatchSegment < Rule
+        def self.rule_key = "match-segment"
+
         include MatchPattern
 
         def on_segment(segment)
@@ -32,21 +34,24 @@ module I18nLint
         end
       end
 
-      # Report when a Regexp pattern matches against an individual segment.
-      class MatchSegmentToSource < Rule
+      # Report when a Regexp pattern matches against an individual segment as compared to itself in the source locale.
+      class MismatchToSource < Rule
+        def self.rule_key = "mismatch-to-source"
+
         include MatchPattern
 
         def on_segment_comparison(segment, source_segment)
           return unless pattern
 
-          each_mismatch(segment.text, source_segment.text) do |mismatch|
-            add_segment_compare_offence(
-              segment, source_segment,
-              "#{mismatch.match} found #{mismatch.actual_count} #{mismatch.actual_count == 1 ? "time" : "times"}, " \
-              "but should be #{mismatch.expected_count}",
-              highlight: mismatch.highlight, source_highlight: mismatch.source_highlight
-            )
-          end
+          mismatches = enum_for(:each_mismatch, segment.text, source_segment.text).to_a
+          return if mismatches.none?
+
+          add_segment_compare_offence(
+            segment, source_segment,
+            "Found #{mismatches.size == 1 ? "mismatch" : "mismatches"} to the source #{source_segment.locale.upcase}",
+            highlight: mismatches.filter_map(&:highlight),
+            source_highlight: mismatches.filter_map(&:source_highlight)
+          )
         end
 
         private
@@ -93,6 +98,8 @@ module I18nLint
 
       # Report when a Regexp pattern matches against a whole YAML file.
       class MatchFile < Rule
+        def self.rule_key = "match-file"
+
         include MatchPattern
 
         def on_file(file)

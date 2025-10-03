@@ -40,7 +40,13 @@ module I18nLint
     end
 
     def describe
-      "#{self.class.rule_key}#{" #{description}" if respond_to?(:description) && description}"
+      class_desc = " #{description}" if respond_to?(:description) && description
+      rule_desc = " #{input.description}" if input.respond_to?(:description) && input.description
+      "#{self.class.rule_key}#{class_desc}#{rule_desc}"
+    end
+
+    def message
+      config["Message"]
     end
 
     def add_offence(item, message = nil)
@@ -54,24 +60,27 @@ module I18nLint
       end
     end
 
-    def add_file_offence(file, message = nil, lineno: nil, source: nil, highlight: nil)
+    def add_file_offence(file, msg = nil, lineno: nil, source: nil, highlight: nil)
       @offences << FileOffence.new(
         describe,
         file.filepath,
         lineno,
         source, # don't print the whole file contents in the offence
-        make_message(message),
+        msg || message,
         highlight
       )
     end
 
-    def add_segment_offence(segment, message = nil, highlight: nil)
-      @offences << make_segment_offence(SegmentOffence, segment, describe, make_message(message), highlight:)
+    def add_segment_offence(segment, msg = nil, highlight: nil)
+      @offences << make_segment_offence(SegmentOffence, segment, describe, msg || message, highlight:)
     end
 
-    def add_segment_compare_offence(segment, source_segment, message = nil, highlight: nil, source_highlight: nil)
-      o = make_segment_offence(CompareSegmentOffence, segment, describe, make_message(message), highlight:)
-      o.source_offence = make_segment_offence(SegmentOffence, source_segment, nil, nil, highlight: source_highlight)
+    def add_segment_compare_offence(segment, source_segment, msg = nil, src_msg = nil, highlight: nil, # rubocop:disable Metrics/ParameterLists
+                                    source_highlight: nil)
+      desc = describe
+      o = make_segment_offence(CompareSegmentOffence, segment, desc, msg || message, highlight:)
+      o.source_offence = make_segment_offence(SegmentOffence, source_segment, desc, src_msg,
+                                              highlight: source_highlight)
       @offences << o
     end
 
@@ -94,12 +103,6 @@ module I18nLint
         message,
         highlight
       )
-    end
-
-    def make_message(message)
-      message ||= config["Message"]
-      message ||= input.description if input.respond_to?(:description) && input.description
-      message
     end
   end
 end

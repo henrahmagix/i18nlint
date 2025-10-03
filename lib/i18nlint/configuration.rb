@@ -31,9 +31,7 @@ module I18nLint
         require ::File.expand_path(path, require_relative_from)
       end
 
-      register_built_in("match-segment", Rules::BuiltIn::MatchSegment)
-      register_built_in("match-file", Rules::BuiltIn::MatchFile)
-      register_built_in("match-segment-to-source", Rules::BuiltIn::MatchSegmentToSource)
+      register_built_ins
 
       problems = register_rule_subclasses
       problems.each { @on_problems.call(_1) } if @on_problems
@@ -71,9 +69,13 @@ module I18nLint
       {}
     end
 
-    def register_built_in(key, klass)
-      @remaining_rule_options.delete(key)&.each do |conf|
-        register_from_options(conf, klass)
+    def find_built_in = proc { _1.name.start_with?(Rules::BuiltIn.name) }
+
+    def register_built_ins
+      Rule.subclasses.select(&find_built_in).each do |klass|
+        @remaining_rule_options.delete(klass.rule_key)&.each do |conf|
+          register_from_options(conf, klass)
+        end
       end
     end
 
@@ -84,9 +86,9 @@ module I18nLint
     end
 
     def register_rule_subclasses
-      Rule.subclasses.reject { _1.name.start_with?(Rules::BuiltIn.name) }.filter_map do |klass|
-        conf = {}
-        conf.merge! @remaining_rule_options.delete(klass.rule_key) || {} if klass.rule_key
+      Rule.subclasses.reject(&find_built_in).filter_map do |klass|
+        conf = @remaining_rule_options.delete(klass.rule_key) if klass.rule_key
+        conf ||= {}
 
         register_from_options(conf, klass)
         nil

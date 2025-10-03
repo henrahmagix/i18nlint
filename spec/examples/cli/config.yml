@@ -12,7 +12,7 @@ match-segment:
       - '*_wef.yml'
   - HasNoPattern
 
-match-segment-to-source:
+mismatch-to-source:
   - Pattern: '\[[A-Z_]+\]'
     Exclude:
       - '*ignore_brackets_comparison.yml'

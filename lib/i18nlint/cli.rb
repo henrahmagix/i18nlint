@@ -10,9 +10,7 @@ require "i18nlint/highlighters/colour"
 module I18nLint
   # Run the linter in your terminal.
   class CLI
-    def self.run
-      new.run
-    end
+    def self.run = new.run
 
     def run # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
       conf = Configuration.new.tap do |conf|
@@ -66,33 +64,33 @@ module I18nLint
 
       puts "Offences:"
       puts
-      puts linter.offences.map { format_offence(_1) }.join("\n")
+      puts linter.offences.map { format_offence(_1) }.join("\n\n")
       puts
       puts "#{linter.offences.size} offences detected"
       exit 1
     end
 
     FILE_OFFENCE_DISPLAY = <<~MSG
-      %<filepath>s:%<lineno>s: %<message>s
+      %<filepath>s:%<lineno>s: %<rule>s: %<message>s
       %<text_indented>s
     MSG
 
     SEGMENT_OFFENCE_DISPLAY = <<~MSG
-      %<filepath>s:%<lineno>s in %<locale>s.%<key>s: %<message>s
+      %<filepath>s:%<lineno>s in %<locale>s.%<key>s: %<rule>s: %<message>s
       %<text_indented>s
     MSG
 
     COMPARE_SEGMENT_OFFENCE_DISPLAY = <<~MSG # 🏳️‍⚧️🏳️‍🌈🫶
-      %<trans_filepath>s:%<trans_lineno>s in %<trans_locale>s.%<trans_key>s: %<trans_message>s
+      %<trans_filepath>s:%<trans_lineno>s in %<trans_locale>s.%<trans_key>s: %<rule>s: %<trans_message>s
       %<trans_text_indented>s
-      %<source_filepath>s:%<source_lineno>s in %<source_locale>s.%<source_key>s:
+      %<source_filepath>s:%<source_lineno>s in %<source_locale>s.%<source_key>s: %<source_message>s
       %<source_text_indented>s
     MSG
 
     private
 
     def format_offence(offence)
-      o = offence_hash_for_formatting(offence).merge(message: make_message(offence))
+      o = offence_hash_for_formatting(offence)
 
       case offence
       when FileOffence then FILE_OFFENCE_DISPLAY % o
@@ -101,13 +99,7 @@ module I18nLint
         source = offence_hash_for_formatting(offence.source_offence)
 
         COMPARE_SEGMENT_OFFENCE_DISPLAY % rename_keys(o, 'trans_\0').merge(rename_keys(source, 'source_\0'))
-      end.gsub(/ +$/, "")
-    end
-
-    def make_message(offence)
-      message = +offence.rule.to_s
-      message.concat " - #{offence.message}" if offence.message
-      message
+      end.gsub(/:? +$/, "").strip
     end
 
     def offence_hash_for_formatting(offence)

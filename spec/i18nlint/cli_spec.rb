@@ -34,6 +34,12 @@ RSpec.describe I18nLint::CLI do
     end
   end
 
+  around do |example|
+    example.run
+  rescue SystemExit
+    raise "Exited non-zero. You should assert `system_exit(n)` so you can assert on the output without RSpec quitting."
+  end
+
   def match_on_one_line(*parts)
     include(/#{parts.join(".*")}/)
   end
@@ -126,31 +132,24 @@ RSpec.describe I18nLint::CLI do
           spec/examples/cli/locales/comments.yml:7: MyScope/NoComments with AllowedPatterns: /^NOTE: /
             # This single line is not allowed.
 
-          spec/examples/cli/locales/en.yml:4 in en.causes_offence: BuiltIn/MatchSegment /wef/
+          spec/examples/cli/locales/en.yml:4 in en.causes_offence: match-segment /wef/
             This has wef in it!
                      ^^^
 
-          spec/examples/cli/locales/fr.yml:5: BuiltIn/MatchFile /German/i
+          spec/examples/cli/locales/fr.yml:5: match-file /German/i
               i_am_a_german_key: 'Was gehn der alter?'
                      ^^^^^^
 
-          spec/examples/cli/locales/raise_brackets_comparison.yml:6 in fr.brackets2: BuiltIn/MatchSegmentToSource /\\[[A-Z_]+\\]/ - [VOTRE_TAG] found 1 time, but should be 0
+          spec/examples/cli/locales/raise_brackets_comparison.yml:6 in fr.brackets2: mismatch-to-source /\\[[A-Z_]+\\]/: Found mismatches to the source EN
             et ca c'est [VOTRE_TAG]
                         ^^^^^^^^^^^
             pour [YOUR_NAME]
-          spec/examples/cli/locales/raise_brackets_comparison.yml:2 in en.brackets2:
-            and that is [YOUR_TAG]
-            for [YOUR_NAME]
-
-          spec/examples/cli/locales/raise_brackets_comparison.yml:6 in fr.brackets2: BuiltIn/MatchSegmentToSource /\\[[A-Z_]+\\]/ - [YOUR_TAG] found 0 times, but should be 1
-            et ca c'est [VOTRE_TAG]
-            pour [YOUR_NAME]
-          spec/examples/cli/locales/raise_brackets_comparison.yml:2 in en.brackets2:
+          spec/examples/cli/locales/raise_brackets_comparison.yml:2 in en.brackets2
             and that is [YOUR_TAG]
                         ^^^^^^^^^^
             for [YOUR_NAME]
 
-          6 offences detected
+          5 offences detected
         OUT
     end
   end
