@@ -4,7 +4,8 @@ require "optparse"
 require "yaml"
 
 require "i18nlint"
-require "i18nlint/highlighters/indicate_below_line"
+require "i18nlint/highlighters/below_line"
+require "i18nlint/highlighters/colour"
 
 module I18nLint
   # Run the linter in your terminal.
@@ -123,13 +124,19 @@ module I18nLint
     end
 
     def rename_keys(hash, gsub)
-      hash.transform_keys! { _1.to_s.gsub(/^(.*)$/, gsub).to_sym }
+      hash.transform_keys! { _1 == :rule ? _1 : _1.to_s.gsub(/^(.*)$/, gsub).to_sym }
     end
 
     def highlight(text, range)
       return text if range.nil? || range.to_a.empty?
 
-      Highlighters::IndicateBelowLine.indicate(text, range)
+      range = [range] unless range[0].is_a?(Array)
+
+      if $stdout.isatty
+        Highlighters::Colour.indicate(text, *range)
+      else
+        Highlighters::BelowLine.indicate(text, *range)
+      end
     end
   end
 end
