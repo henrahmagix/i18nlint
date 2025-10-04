@@ -18,7 +18,7 @@ module I18nLint
 
       def initialize(instance)
         @rule_class = instance.class
-        super("Rule #{rule_class} will never be used: it must respond to at least one of " \
+        super("Rule #{rule_class} will not be used: it must respond to at least one of " \
               "#{LINT_METHODS.map(&:inspect).join(", ")}")
       end
     end

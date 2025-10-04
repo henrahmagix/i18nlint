@@ -85,7 +85,7 @@ module I18nLint
     # Store segments then enumerate them compared to the source_locale.
     class ComparisonMap
       def initialize(source_locale)
-        @source_locale = source_locale
+        @source_locale = source_locale.downcase
         @hash = Hash.new do |h, k|
           next if h.frozen?
 
@@ -102,18 +102,17 @@ module I18nLint
       include Enumerable
 
       def each(&)
-        enum = ::Enumerator.new do |yielder|
+        ::Enumerator.new do |yielder|
           each_segment do |segment|
             each_source(segment.key) do |source_segment|
               yielder << [segment, source_segment]
             end
           end
-        end
-        block_given? ? enum.each(&) : enum
+        end.each(&)
       end
 
       def add(segment)
-        @hash[segment.locale][segment.key] << segment
+        @hash[segment.locale.downcase][segment.key] << segment
       end
 
       def freeze
@@ -128,7 +127,7 @@ module I18nLint
       private
 
       def each_segment(&block)
-        @hash.except(source_locale.upcase, source_locale.downcase).each_value do |per_key|
+        @hash.except(source_locale).each_value do |per_key|
           per_key.each_value do |segments|
             segments.each(&block)
           end
@@ -136,8 +135,7 @@ module I18nLint
       end
 
       def each_source(key, &)
-        @hash.dig(source_locale.upcase, key)&.each(&)
-        @hash.dig(source_locale.downcase, key)&.each(&)
+        @hash.dig(source_locale, key)&.each(&)
       end
     end
   end

@@ -29,16 +29,15 @@ module I18nLint
     end
 
     def each_file(&)
-      enum = ::Enumerator.new do |yielder|
+      ::Enumerator.new do |yielder|
         @read_files_by_filepath.each do |filepath, yaml|
           yielder << @parsed_files_by_filepath[filepath] ||= parse_yaml(yaml, filepath:)
         end
-      end
-      block_given? ? enum.each(&) : enum
+      end.each(&)
     end
 
     def each_segment(file: nil, &block)
-      enum = ::Enumerator.new do |yielder|
+      ::Enumerator.new do |yielder|
         each_file do |i18n_file|
           next if file && i18n_file != file
 
@@ -47,8 +46,7 @@ module I18nLint
             yielder << segment
           end
         end
-      end
-      block_given? ? enum.each(&block) : enum
+      end.each(&block)
     end
 
     private

@@ -139,7 +139,7 @@ RSpec.describe I18nLint::CLI do
         end
         .to output(anything).to_stdout
         .and output(<<~ERR).to_stderr # should exclude MissingName + MissingRuleKey; we assert on the whole output here
-          Rule BadImplementation will never be used: it must respond to at least one of :on_file, :on_segment, :on_segment_comparison
+          Rule BadImplementation will not be used: it must respond to at least one of :on_file, :on_segment, :on_segment_comparison
           uh oh, i cannot initialize
           Unused configuration "ThisWillNotBe/Used" expects class ThisWillNotBe::Used to subclass I18nLint::Rule. If this is a rule you're expecting to be used, that means it hasn't been loaded in the `require:` list, or it doesn't subclass I18nLint::Rule.
         ERR
