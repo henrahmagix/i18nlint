@@ -69,14 +69,16 @@ RSpec.describe I18nLint::Enumerator do
       calls
     end
 
-    it "reads all files when instantiated" do
+    it "only reads what's needed" do
       calls = capture_method_calls(File, :read)
       instance = nil
 
       expect { instance = described_class.new(examples_dir.join("enumerator/*.yml"), source_locale: "en") }
-        .to change { calls.size }.from(0).to(5) # all files should be read when initialized
+        .not_to change(calls, :size)
       expect { instance.each_file.take(2) }
-        .not_to change { calls.size }.from(5) # files should not be re-read
+        .to change(calls, :size).from(0).to(2)
+      expect { instance.each_file.take(3) }
+        .to change(calls, :size).from(2).to(3)
     end
 
     it "only parses what's needed" do
@@ -91,7 +93,9 @@ RSpec.describe I18nLint::Enumerator do
 
     it "works with all kinds of yaml, but doesn't offer line numbers for everything" do
       segments = nil
-      expect { segments = described_class.new(examples_dir.join("**/*.yml"), source_locale: "FR").each_segment.to_a }
+      # Find filepaths separately so we can ignore the config file: it's hard to do with an fnmatch.
+      filepaths = Dir.glob(examples_dir.join("**/*.yml")).reject { _1.end_with?("/cli/config.yml") }
+      expect { segments = described_class.new(filepaths, source_locale: "FR").each_segment.to_a }
         .not_to raise_error
       expect(segments.map(&:filepath)).to include examples_dir.join("all_sorts_of_yaml_syntax.yml").to_s
 
@@ -101,81 +105,64 @@ RSpec.describe I18nLint::Enumerator do
       all_sorts = segments.select { _1.filepath == examples_dir.join("all_sorts_of_yaml_syntax.yml").to_s }
                           .map { "#{_1.locale}.#{_1.key}:#{_1.lineno || "<NO LINE>"}" }
       expect(all_sorts.join("\n")).to eq <<~KEYS.chomp
-        lower.:2
-        UPPER.:3
-        false.:4
-        no.:5
+        stuff.lower:3
+        stuff.UPPER:4
+        stuff.false:5
+        stuff.no:6
         map_alias.some_array.0:<NO LINE>
         map_alias.some_array.1:<NO LINE>
         map_alias.some_array.2:<NO LINE>
         map_alias.some_sequence.0:<NO LINE>
         map_alias.some_sequence.1:<NO LINE>
-        map_alias.some_hash.c:12
-        map_alias.some_hash.d:12
-        map_alias.some_map.e:14
-        map_alias.some_map.f:15
+        map_alias.some_hash.c:13
+        map_alias.some_hash.d:13
+        map_alias.some_map.e:15
+        map_alias.some_map.f:16
         map_copied.some_array.0:<NO LINE>
         map_copied.some_array.1:<NO LINE>
         map_copied.some_array.2:<NO LINE>
         map_copied.some_sequence.0:<NO LINE>
         map_copied.some_sequence.1:<NO LINE>
-        map_copied.some_hash.c:12
-        map_copied.some_hash.d:12
-        map_copied.some_map.e:14
-        map_copied.some_map.f:15
+        map_copied.some_hash.c:13
+        map_copied.some_hash.d:13
+        map_copied.some_map.e:15
+        map_copied.some_map.f:16
         map_extended.some_array.0:<NO LINE>
         map_extended.some_array.1:<NO LINE>
         map_extended.some_array.2:<NO LINE>
         map_extended.some_sequence.0:<NO LINE>
         map_extended.some_sequence.1:<NO LINE>
-        map_extended.some_hash.c:12
-        map_extended.some_hash.d:12
-        map_extended.some_map.e:14
-        map_extended.some_map.f:15
-        map_extended.nested_sequence.0.a:20
-        map_extended.nested_sequence.0.b:21
-        map_extended.nested_sequence.1.a:22
-        map_extended.nested_sequence.1.b:23
-        map_alias_2.foo:26
+        map_extended.some_hash.c:13
+        map_extended.some_hash.d:13
+        map_extended.some_map.e:15
+        map_extended.some_map.f:16
+        map_extended.nested_sequence.0.a:21
+        map_extended.nested_sequence.0.b:22
+        map_extended.nested_sequence.1.a:23
+        map_extended.nested_sequence.1.b:24
+        map_alias_2.foo:27
         map_copied_2.1.some_array.0:<NO LINE>
         map_copied_2.1.some_array.1:<NO LINE>
         map_copied_2.1.some_array.2:<NO LINE>
         map_copied_2.1.some_sequence.0:<NO LINE>
         map_copied_2.1.some_sequence.1:<NO LINE>
-        map_copied_2.1.some_hash.c:12
-        map_copied_2.1.some_hash.d:12
-        map_copied_2.1.some_map.e:14
-        map_copied_2.1.some_map.f:15
-        map_copied_2.2.foo:26
+        map_copied_2.1.some_hash.c:13
+        map_copied_2.1.some_hash.d:13
+        map_copied_2.1.some_map.e:15
+        map_copied_2.1.some_map.f:16
+        map_copied_2.2.foo:27
         map_extended_2.1.some_array.0:<NO LINE>
         map_extended_2.1.some_array.1:<NO LINE>
         map_extended_2.1.some_array.2:<NO LINE>
         map_extended_2.1.some_sequence.0:<NO LINE>
         map_extended_2.1.some_sequence.1:<NO LINE>
-        map_extended_2.1.some_hash.c:12
-        map_extended_2.1.some_hash.d:12
-        map_extended_2.1.some_map.e:14
-        map_extended_2.1.some_map.f:15
-        map_extended_2.2.foo:26
-        map_extended_2.extra:30
-        sequence_alias.0:<NO LINE>
-        sequence_alias.1:<NO LINE>
-        sequence_copied.0:<NO LINE>
-        sequence_copied.1:<NO LINE>
-        sequence_extended.0.0:<NO LINE>
-        sequence_extended.0.1:<NO LINE>
-        sequence_extended.1:<NO LINE>
-        sequence_alias_2.0:<NO LINE>
-        sequence_alias_2.1:<NO LINE>
-        sequence_copied_2.0.0:<NO LINE>
-        sequence_copied_2.0.1:<NO LINE>
-        sequence_copied_2.1.0:<NO LINE>
-        sequence_copied_2.1.1:<NO LINE>
-        sequence_extended_2.<<.0.0:<NO LINE>
-        sequence_extended_2.<<.0.1:<NO LINE>
-        sequence_extended_2.<<.1.0:<NO LINE>
-        sequence_extended_2.<<.1.1:<NO LINE>
-        string_double_left_arrow.<<:48
+        map_extended_2.1.some_hash.c:13
+        map_extended_2.1.some_hash.d:13
+        map_extended_2.1.some_map.e:15
+        map_extended_2.1.some_map.f:16
+        map_extended_2.2.foo:27
+        map_extended_2.extra:31
+        string_double_left_arrow.<<:34
       KEYS
     end
   end

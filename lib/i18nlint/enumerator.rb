@@ -3,35 +3,68 @@
 require_relative "cloneable_struct"
 require_relative "yaml_with_lines"
 
+require "i18n"
+
 module I18nLint
-  File = CloneableStruct.new(:filepath, :parsed, :yaml, keyword_init: true)
+  File = CloneableStruct.new(:filepath, :parsed, :raw, keyword_init: true) do
+    def initialize(...)
+      super
+      @ext = ::File.extname(filepath)
+      @is_ruby = @ext == ".rb"
+      @is_yaml = @ext == ".yml" || @ext == ".yaml"
+      @is_json = @ext == ".json"
+    end
+
+    def ruby? = @is_ruby
+    def yaml? = @is_yaml
+    def json? = @is_json
+  end
 
   Segment = CloneableStruct.new(:file, :lineno, :key, :text, :locale, :source_locale, keyword_init: true) do
     def filepath = file.filepath
 
     def source?
-      locale == source_locale
+      locale.to_s == source_locale.to_s
     end
+  end
+
+  # Using an I18n backend to load and parse the files ensures consistency in syntactical restrictions.
+  class Backend < ::I18n::Backend::Simple
+    # We're overloading so we can capture line numbers when parsing YAML.
+    def load_yml(filename)
+      [YamlWithLines.unsafe_load_file(filename, symbolize_names: true, freeze: true), true]
+    rescue StandardError, ScriptError => e
+      raise I18n::InvalidLocaleData.new(filename, e.inspect)
+    end
+    alias load_yaml load_yml # aliased methods don't get overloaded, so re-alias
   end
 
   # Yields each parsed file and segment by `:each_file` and `:each_segment` respectively. `:each` is not supported.
   class Enumerator
+    attr_reader :source_locale
+
     def initialize(filepaths, source_locale:)
-      @read_files_by_filepath = read_all_files(Array(filepaths).map(&:to_s))
+      @filepaths = Dir[*Array(filepaths).map(&:to_s)]
       @source_locale = source_locale
+
+      I18n.backend = Backend.new
 
       @parsed_files_by_filepath = {}
       @segments_by_filepath = Hash.new { |h, filepath| h[filepath] = [] }
     end
 
     def num_files
-      @read_files_by_filepath.size
+      @filepaths.size
     end
 
     def each_file(&)
       ::Enumerator.new do |yielder|
-        @read_files_by_filepath.each do |filepath, yaml|
-          yielder << @parsed_files_by_filepath[filepath] ||= parse_yaml(yaml, filepath:)
+        @filepaths.each do |filepath|
+          yielder << @parsed_files_by_filepath[filepath] ||= File.new(
+            filepath:,
+            parsed: I18n.backend.send(:load_file, filepath),
+            raw: ::File.read(filepath)
+          )
         end
       end.each(&)
     end
@@ -41,42 +74,13 @@ module I18nLint
         each_file do |i18n_file|
           next if file && i18n_file != file
 
-          walk_file(i18n_file) do |locale, full_key, text, lineno, _line_end|
-            segment = Segment.new(file: i18n_file, lineno:, key: full_key, text:, locale:, source_locale:)
+          YamlWithLines.walk(i18n_file.parsed) do |(locale, *key_parts), text, line_start, _line_end|
+            full_key = key_parts.join(".")
+            segment = Segment.new(file: i18n_file, lineno: line_start, key: full_key, text:, locale:, source_locale:)
             yielder << segment
           end
         end
       end.each(&block)
-    end
-
-    private
-
-    attr_reader :source_locale
-
-    def read_all_files(filepaths)
-      filepaths.flat_map { Dir.glob(_1) }
-               .sort
-               .uniq
-               .map { |filepath| [filepath, read_file(filepath)] }
-               .compact
-               .to_h
-    end
-
-    def read_file(filepath)
-      ::File.read(filepath)
-    end
-
-    def parse_yaml(yaml, filepath:)
-      parsed = YamlWithLines.parse(yaml)
-      File.new(filepath:, parsed:, yaml:)
-    end
-
-    def walk_file(file)
-      file.parsed.each do |doc|
-        YamlWithLines.walk(doc) do |(locale, *key_parts), text, line_start, line_end|
-          yield locale, key_parts.join("."), text, line_start, line_end
-        end
-      end
     end
   end
 end

@@ -3,10 +3,10 @@
 module MyScope
   class NoComments < I18nLint::Rule
     Comment = Struct.new(:lineno, :raw) do
-      def self.all_from_yaml(yaml) # rubocop:disable Metrics/MethodLength
+      def self.all_from_file(file) # rubocop:disable Metrics/MethodLength
         comments = []
         is_block_comment = false
-        yaml.lines.each.with_index(1) do |line, lineno|
+        file.raw.lines.each.with_index(1) do |line, lineno|
           if line.match?(/^# ?/)
             if is_block_comment
               comments.last.raw += line
@@ -18,6 +18,7 @@ module MyScope
             is_block_comment = false
           end
         end
+        comments.reject! { _1.raw.match?(/# ?frozen_string_literal:/) } if file.ruby?
         comments
       end
 
@@ -42,9 +43,10 @@ module MyScope
     end
 
     def on_file(file)
-      return unless file.yaml.match?(/^# ?/)
+      return unless file.ruby? || file.yaml?
+      return unless file.raw.match?(/^# ?/)
 
-      comments = Comment.all_from_yaml(file.yaml)
+      comments = Comment.all_from_file(file)
       comments.reject { |comment| allowed_patterns.any? { comment.match?(_1) } }.each do |comment|
         add_file_offence(file, lineno: comment.lineno, source: comment.raw)
       end

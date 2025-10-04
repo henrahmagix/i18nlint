@@ -1,6 +1,8 @@
 AllCops:
   TargetRubyVersion: 3.1
   NewCops: enable
+  Exclude:
+    - gemfiles/*.gemfile
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes
@@ -14,3 +16,4 @@ Style/FormatStringToken:
 Metrics/BlockLength:
   Exclude:
     - spec/**/*
+    - i18nlint.gemspec

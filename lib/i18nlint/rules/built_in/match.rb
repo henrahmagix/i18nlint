@@ -96,7 +96,7 @@ module I18nLint
         private_constant :Mismatch
       end
 
-      # Report when a Regexp pattern matches against a whole YAML file.
+      # Report when a Regexp pattern matches against a whole I18n file.
       class MatchFile < Rule
         def self.rule_key = "match-file"
 
@@ -105,18 +105,18 @@ module I18nLint
         def on_file(file)
           return unless pattern
 
-          file.yaml.scan(pattern) do
-            source, lineno, offset_adjust = source_for_match(Regexp.last_match, file.yaml)
+          file.raw.scan(pattern) do
+            source, lineno, offset_adjust = source_for_match(Regexp.last_match, file.raw)
             highlight = Regexp.last_match.offset(0).map { _1 - offset_adjust }
             add_file_offence(file, nil, lineno:, source:, highlight:)
           end
         end
 
-        def source_for_match(match, yaml)
+        def source_for_match(match, raw)
           end_of_match = match.offset(0)[1]
           n = 0
           lines = []
-          yaml.lines.each do |line|
+          raw.lines.each do |line|
             break if n >= end_of_match
 
             lines << line

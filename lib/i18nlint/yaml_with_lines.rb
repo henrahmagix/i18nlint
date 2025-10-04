@@ -5,11 +5,25 @@ module I18nLint
   class YamlWithLines
     ValueWithLineNumbers = Struct.new(:value, :lines)
 
-    def self.parse(yaml)
+    def self.unsafe_load(yaml, filename: nil, fallback: false, symbolize_names: false, freeze: false, # rubocop:disable Metrics/ParameterLists
+                         strict_integer: false)
+      result = parse(yaml, filename:)
+      return fallback unless result
+
+      Psych::Visitors::ToRubyWithLineNumbers.create(symbolize_names:, freeze:, strict_integer:).accept(result)[0]
+    end
+
+    def self.unsafe_load_file filename, **kwargs
+      ::File.open(filename, "r:bom|utf-8") do |f|
+        unsafe_load f, filename: filename, **kwargs
+      end
+    end
+
+    def self.parse(yaml, filename: nil)
       handler = Psych::TreeWithLineNumbersBuilder.new
       handler.parser = Psych::Parser.new(handler)
-      handler.parser.parse(yaml)
-      Psych::Visitors::ToRubyWithLineNumbers.create.accept(handler.root)
+      handler.parser.parse(yaml, filename:)
+      handler.root
     end
 
     def self.walk(val, key_parts = [], &block)

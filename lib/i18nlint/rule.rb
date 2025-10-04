@@ -35,7 +35,7 @@ module I18nLint
       attr_reader :rule_classes
 
       def inherited(rule_class)
-        rule_classes << rule_class
+        @rule_classes << rule_class
         super
       end
     end

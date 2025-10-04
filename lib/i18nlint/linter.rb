@@ -112,7 +112,7 @@ module I18nLint
       end
 
       def add(segment)
-        @hash[segment.locale.downcase][segment.key] << segment
+        @hash[segment.locale.downcase.to_sym][segment.key] << segment
       end
 
       def freeze
@@ -127,7 +127,7 @@ module I18nLint
       private
 
       def each_segment(&block)
-        @hash.except(source_locale).each_value do |per_key|
+        @hash.except(source_locale.to_sym).each_value do |per_key|
           per_key.each_value do |segments|
             segments.each(&block)
           end
@@ -135,7 +135,7 @@ module I18nLint
       end
 
       def each_source(key, &)
-        @hash.dig(source_locale, key)&.each(&)
+        @hash.dig(source_locale.to_sym, key)&.each(&)
       end
     end
   end

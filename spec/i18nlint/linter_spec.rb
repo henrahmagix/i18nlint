@@ -8,9 +8,9 @@ RSpec.describe I18nLint::Linter do
 
     files = [
       I18nLint::File.new(filepath: "locales/en.yml", parsed: { "en" => { "hi" => "hello" } },
-                         yaml: "en:\n  hi: hello\n"),
+                         raw: "en:\n  hi: hello\n"),
       I18nLint::File.new(filepath: "locales/fr.yml", parsed: { "fr" => { "hi" => "bonjour" } },
-                         yaml: "fr:\n  hi: bonjour\n")
+                         raw: "fr:\n  hi: bonjour\n")
     ]
     allow(enum).to receive(:each_file) { |&b| files.each(&b) }
     original_files = Marshal.dump(files)
@@ -30,7 +30,7 @@ RSpec.describe I18nLint::Linter do
 
       def modify_file(file)
         file.filepath.prepend "/changed/"
-        file.yaml.concat "\nchanged: true"
+        file.raw.concat "\nchanged: true"
         file.parsed.merge!(changed: true)
       end
 

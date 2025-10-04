@@ -89,19 +89,22 @@ RSpec.describe I18nLint::CLI do
 
     context "with offending I18n" do
       let(:source) { "en" }
-      let(:files) { "spec/examples/cli/locales/*.yml" }
+      let(:files) { "spec/examples/cli/locales/*" }
 
       it "prints the offences and exits 0" do
         expect { described_class.run }
           .to system_exit(1)
           .and output(anything).to_stderr # suppress for this test
           .and output(<<~OUT).to_stdout
-            Inspecting 8 files
-            F.F.F...
+            Inspecting 9 files
+            FF.F.F...
             Comparing segments to source EN
             ...F
 
             Offences:
+
+            spec/examples/cli/locales/comments.rb:6: MyScope/NoComments with AllowedPatterns: /^NOTE: /
+              # This single Ruby comment is not allowed.
 
             spec/examples/cli/locales/comments.yml:4: MyScope/NoComments with AllowedPatterns: /^NOTE: /
               # This is not allowed.
@@ -118,16 +121,16 @@ RSpec.describe I18nLint::CLI do
                 i_am_a_german_key: 'Was gehn der alter?'
                        ^^^^^^
 
-            spec/examples/cli/locales/raise_brackets_comparison.yml:6 in fr.brackets2: mismatch-to-source /\\[[A-Z_]+\\]/: Found mismatches to the source EN
+            spec/examples/cli/locales/raise_brackets_comparison.rb: in fr.brackets2: mismatch-to-source /\\[[A-Z_]+\\]/: Found mismatches to the source EN
               et ca c'est [VOTRE_TAG]
                           ^^^^^^^^^^^
               pour [YOUR_NAME]
-            spec/examples/cli/locales/raise_brackets_comparison.yml:2 in en.brackets2
+            spec/examples/cli/locales/raise_brackets_comparison.rb: in en.brackets2
               and that is [YOUR_TAG]
                           ^^^^^^^^^^
               for [YOUR_NAME]
 
-            5 offences detected
+            6 offences detected
           OUT
       end
 
@@ -142,6 +145,7 @@ RSpec.describe I18nLint::CLI do
           Rule BadImplementation will not be used: it must respond to at least one of :on_file, :on_segment, :on_segment_comparison
           uh oh, i cannot initialize
           Unused configuration "ThisWillNotBe/Used" expects class ThisWillNotBe::Used to subclass I18nLint::Rule. If this is a rule you're expecting to be used, that means it hasn't been loaded in the `require:` list, or it doesn't subclass I18nLint::Rule.
+          This is an evaluated Ruby file. The final value should be the hash of I18n.
         ERR
       end
     end

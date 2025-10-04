@@ -20,7 +20,7 @@ RSpec.describe I18nLint do
         def self.name = "Test::Description"
 
         def on_file(i18n_file)
-          top_level_keys = i18n_file.parsed.flat_map(&:keys)
+          top_level_keys = i18n_file.parsed.keys
           return if top_level_keys.size < 2
 
           add_offence(i18n_file)
@@ -45,7 +45,7 @@ RSpec.describe I18nLint do
         def self.name = "Test::Message"
 
         def on_file(i18n_file)
-          top_level_keys = i18n_file.parsed.flat_map(&:keys)
+          top_level_keys = i18n_file.parsed.keys
           return if top_level_keys.size < 2
 
           add_offence(i18n_file, "too many top-level keys: must be < 2, but is #{top_level_keys}")
@@ -59,7 +59,7 @@ RSpec.describe I18nLint do
       examples = Pathname.new(File.expand_path("examples/", __dir__))
       expect(I18nLint.lint(examples.join("class/*.yml"), source_locale: "fr")).to contain_exactly_offences(
         I18nLint::FileOffence.new("Test/Message", examples.join("class/bad.yml").to_s, nil, nil,
-                                  'too many top-level keys: must be < 2, but is ["fr", "en"]')
+                                  "too many top-level keys: must be < 2, but is [:fr, :en]")
       )
     end
   end
