@@ -8,6 +8,6 @@ gem "rspec", "~> 3.0"
 gem "rubocop", "~> 1.21"
 gem "simplecov", "~> 0.22.0"
 gem "simplecov-lcov", "~> 0.9.0"
-gem "i18n", "1.5.1"
+gem "i18n", "1.5.3"
 
 gemspec path: "../"

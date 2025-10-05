@@ -19,7 +19,7 @@ GEM
     docile (1.4.1)
     erb (4.0.4)
       cgi (>= 0.3.3)
-    i18n (1.7.0)
+    i18n (1.0.1)
       concurrent-ruby (~> 1.0)
     io-console (0.8.1)
     irb (1.15.2)
@@ -98,7 +98,7 @@ PLATFORMS
 
 DEPENDENCIES
   appraisal
-  i18n (= 1.7.0)
+  i18n (= 1.0.1)
   i18nlint!
   irb
   rake (~> 13.0)
