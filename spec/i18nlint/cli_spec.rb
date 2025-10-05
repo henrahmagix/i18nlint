@@ -46,6 +46,7 @@ RSpec.describe I18nLint::CLI do
 
   it "exits 0 when no rules are defined" do
     allow(I18nLint::Rule).to receive(:rule_classes).and_return []
+    allow(I18nLint::Registry).to receive(:rules).and_return []
     stub_const "::ARGV", ["--source=fr", "spec/examples/**/*.yml"]
     expect { described_class.run }
       .to system_exit(0)
@@ -96,10 +97,10 @@ RSpec.describe I18nLint::CLI do
           .to system_exit(1)
           .and output(anything).to_stderr # suppress for this test
           .and output(<<~OUT).to_stdout
-            Inspecting 9 files
-            FF.F.F...
+            Inspecting 10 files
+            FF.F.F....
             Comparing segments to source EN
-            ...F
+            ...FF
 
             Offences:
 
@@ -121,6 +122,11 @@ RSpec.describe I18nLint::CLI do
                 i_am_a_german_key: 'Was gehn der alter?'
                        ^^^^^^
 
+            spec/examples/cli/locales/interpolations.yml:4 in fr.welcome: BuiltIn/Interpolations: missing in fr: name
+              Bienvenue % {name}
+            spec/examples/cli/locales/interpolations.yml:2 in en.welcome
+              Welcome %{name}
+
             spec/examples/cli/locales/raise_brackets_comparison.rb: in fr.brackets2: mismatch-to-source /\\[[A-Z_]+\\]/: Found mismatches to the source EN
               et ca c'est [VOTRE_TAG]
                           ^^^^^^^^^^^
@@ -130,7 +136,7 @@ RSpec.describe I18nLint::CLI do
                           ^^^^^^^^^^
               for [YOUR_NAME]
 
-            6 offences detected
+            7 offences detected
           OUT
       end
 

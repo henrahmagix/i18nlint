@@ -3,6 +3,22 @@
 RSpec.describe I18nLint::Enumerator do
   let(:examples_dir) { Pathname.new File.expand_path "../examples", __dir__ }
 
+  describe "File" do
+    it "says what kind of source the file is" do
+      expect(I18nLint::File.new(filepath: "a.rb")).to have_attributes(ruby?: true, yaml?: false, json?: false)
+      expect(I18nLint::File.new(filepath: "b.yml")).to have_attributes(ruby?: false, yaml?: true, json?: false)
+      expect(I18nLint::File.new(filepath: "c.yaml")).to have_attributes(ruby?: false, yaml?: true, json?: false)
+      expect(I18nLint::File.new(filepath: "d.json")).to have_attributes(ruby?: false, yaml?: false, json?: true)
+    end
+  end
+
+  describe "Segment" do
+    it "can capture the interpolations in the text" do
+      expect(I18nLint::Segment.new(text: "hello").interpolations).to eq []
+      expect(I18nLint::Segment.new(text: "hello %{name} %{surname}").interpolations).to eq %i[name surname]
+    end
+  end
+
   it "enumerates each file" do
     instance = described_class.new(examples_dir.join("enumerator/*.yml"), source_locale: "en")
 

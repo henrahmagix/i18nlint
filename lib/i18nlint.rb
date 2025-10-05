@@ -25,8 +25,11 @@ module I18nLint
   module Rules
     # Built-in rules that should suit most use-cases.
     module BuiltIn
+      # Match rules have no default configuration, so they must be defined in config to be registered.
       require_relative "i18nlint/rules/built_in/match"
-      # They get registered by configuration.
+      # Other built-ins aren't much configurable so they're always registered.
+      require_relative "i18nlint/rules/built_in/interpolations"
+      Registry.register_rule(BuiltIn::Interpolations)
     end
   end
 end

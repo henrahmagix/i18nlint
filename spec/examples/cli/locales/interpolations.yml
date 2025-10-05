@@ -1,0 +1,4 @@
+en:
+  welcome: Welcome %{name}
+fr:
+  welcome: Bienvenue % {name}
