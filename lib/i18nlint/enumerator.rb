@@ -31,20 +31,21 @@ module I18nLint
   # Using an I18n backend to load and parse the files ensures consistency in syntactical restrictions.
   class Backend < ::I18n::Backend::Simple
     # We're overloading so we can capture line numbers when parsing YAML.
-    if Gem::Version.new(I18n::VERSION) < Gem::Version.new("1.9")
-      def load_yml(filename)
-        YamlWithLines.unsafe_load_file(filename, symbolize_names: true, freeze: true)
-      rescue StandardError, ScriptError => e
-        raise I18n::InvalidLocaleData.new(filename, e.inspect)
-      end
-    else
-      def load_yml(filename)
-        [YamlWithLines.unsafe_load_file(filename, symbolize_names: true, freeze: true), true]
-      rescue StandardError, ScriptError => e
-        raise I18n::InvalidLocaleData.new(filename, e.inspect)
-      end
+    def suppress_warnings
+      verbosity = $VERBOSE
+      $VERBOSE = nil
+      yield
+    ensure
+      $VERBOSE = verbosity
     end
-    alias load_yaml load_yml # aliased methods don't get overloaded, so re-alias
+
+    def load_file(filepath)
+      yaml = Object.const_get(:YAML)
+      suppress_warnings { Object.const_set(:YAML, YamlWithLines) }
+      super
+    ensure
+      suppress_warnings { Object.const_set(:YAML, yaml) }
+    end
   end
 
   # Yields each parsed file and segment by `:each_file` and `:each_segment` respectively. `:each` is not supported.

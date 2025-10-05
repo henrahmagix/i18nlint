@@ -32,10 +32,10 @@ RSpec.describe I18nLint do
 
     it "finds offences for the rule" do
       examples = Pathname.new(File.expand_path("examples/", __dir__))
-      expect(I18nLint.lint(examples.join("class/*.yml"), source_locale: "fr")).to contain_exactly_offences(
+      expect(I18nLint.lint(examples.join("class/*.yml"), source_locale: "fr")).to eq [
         I18nLint::FileOffence.new("Test/Description Each file should only have 1 top-level locale key.",
                                   examples.join("class/bad.yml").to_s, nil, nil, nil)
-      )
+      ]
     end
   end
 
@@ -48,7 +48,8 @@ RSpec.describe I18nLint do
           top_level_keys = i18n_file.parsed.keys
           return if top_level_keys.size < 2
 
-          add_offence(i18n_file, "too many top-level keys: must be < 2, but is #{top_level_keys}")
+          # Previous I18n versions don't symbolize the keys when parsing, so we normalise them for this test.
+          add_offence(i18n_file, "too many top-level keys: must be < 2, but is #{top_level_keys.map(&:to_sym)}")
         end
       end
     end
@@ -57,25 +58,10 @@ RSpec.describe I18nLint do
 
     it "finds offences for the rule" do
       examples = Pathname.new(File.expand_path("examples/", __dir__))
-      expect(I18nLint.lint(examples.join("class/*.yml"), source_locale: "fr")).to contain_exactly_offences(
+      expect(I18nLint.lint(examples.join("class/*.yml"), source_locale: "fr")).to eq [
         I18nLint::FileOffence.new("Test/Message", examples.join("class/bad.yml").to_s, nil, nil,
                                   "too many top-level keys: must be < 2, but is [:fr, :en]")
-      )
-    end
-  end
-
-  def match_offences(offences)
-    contain_exactly_offences(*offences)
-  end
-
-  matcher :contain_exactly_offences do |*expected|
-    diffable
-
-    expected.sort_by!(&:inspect)
-
-    match do |actual|
-      actual.sort_by!(&:inspect)
-      actual == expected
+      ]
     end
   end
 end

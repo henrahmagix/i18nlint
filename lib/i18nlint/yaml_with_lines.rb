@@ -5,37 +5,41 @@ module I18nLint
   class YamlWithLines
     ValueWithLineNumbers = Struct.new(:value, :lines)
 
-    def self.unsafe_load(yaml, filename: nil, fallback: false, symbolize_names: false, freeze: false, # rubocop:disable Metrics/ParameterLists
-                         strict_integer: false)
-      result = parse(yaml, filename:)
-      return fallback unless result
+    class << self
+      def unsafe_load(yaml, filename: nil, fallback: false, symbolize_names: false, freeze: false, # rubocop:disable Metrics/ParameterLists
+                      strict_integer: false)
+        result = parse(yaml, filename:)
+        return fallback unless result
 
-      Psych::Visitors::ToRubyWithLineNumbers.create(symbolize_names:, freeze:, strict_integer:).accept(result)[0]
-    end
-
-    def self.unsafe_load_file filename, **kwargs
-      ::File.open(filename, "r:bom|utf-8") do |f|
-        unsafe_load f, filename: filename, **kwargs
+        Psych::Visitors::ToRubyWithLineNumbers.create(symbolize_names:, freeze:, strict_integer:).accept(result)[0]
       end
-    end
 
-    def self.parse(yaml, filename: nil)
-      handler = Psych::TreeWithLineNumbersBuilder.new
-      handler.parser = Psych::Parser.new(handler)
-      handler.parser.parse(yaml, filename:)
-      handler.root
-    end
+      def unsafe_load_file filename, **kwargs
+        ::File.open(filename, "r:bom|utf-8") do |f|
+          unsafe_load f, filename: filename, **kwargs
+        end
+      end
 
-    def self.walk(val, key_parts = [], &block)
-      case val
-      when ValueWithLineNumbers
-        yield key_parts, val.value, val.lines.first, val.lines.last
-      when Hash
-        val.each { |each_key, each_val| walk(each_val, key_parts + [each_key], &block) }
-      when Enumerable
-        val.each_with_index { |each_val, each_key| walk(each_val, key_parts + [each_key], &block) }
-      else
-        yield key_parts, val
+      alias load_file unsafe_load_file
+
+      def parse(yaml, filename: nil)
+        handler = Psych::TreeWithLineNumbersBuilder.new
+        handler.parser = Psych::Parser.new(handler)
+        handler.parser.parse(yaml, filename:)
+        handler.root
+      end
+
+      def walk(val, key_parts = [], &block)
+        case val
+        when ValueWithLineNumbers
+          yield key_parts, val.value, val.lines.first, val.lines.last
+        when Hash
+          val.each { |each_key, each_val| walk(each_val, key_parts + [each_key], &block) }
+        when Enumerable
+          val.each_with_index { |each_val, each_key| walk(each_val, key_parts + [each_key], &block) }
+        else
+          yield key_parts, val
+        end
       end
     end
   end

@@ -15,7 +15,10 @@ RSpec.configure do |config|
 
   config.disable_monkey_patching!
 
-  config.expect_with(:rspec) { |c| c.syntax = :expect }
+  config.expect_with(:rspec) do |c|
+    c.syntax = :expect
+    c.max_formatted_output_length = 500 # our structs are long
+  end
 
   config.order = :random
   Kernel.srand config.seed
