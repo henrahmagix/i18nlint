@@ -81,14 +81,28 @@ RSpec.describe I18nLint::Enumerator do
         .to change(calls, :size).from(2).to(3)
     end
 
-    it "only parses what's needed" do
+    it "only parses what's needed when enumerating files" do
       calls = capture_method_calls(I18nLint::YamlWithLines, :parse)
       instance = described_class.new(examples_dir.join("enumerator/*.yml"), source_locale: "en")
 
       expect { instance.each_file.take(2) }
-        .to change { calls.size }.from(0).to(2) # only some files should be parsed
+        .to change(calls, :size).from(0).to(2) # only the yielded files should be parsed
       expect { instance.each_file.to_a }
-        .to change { calls.size }.from(2).to(5) # rest of the files should be parsed
+        .to change(calls, :size).from(2).to(5) # rest of the files should be parsed
+    end
+
+    it "only parses what's needed when enumerating segments" do
+      calls = capture_method_calls(I18nLint::YamlWithLines, :parse)
+      instance = described_class.new(examples_dir.join("enumerator/num_segments/{3,2,1}.yml"), source_locale: "en")
+
+      expect { instance.each_segment.take(1) }
+        .to change(calls, :size).from(0).to(1) # only one file should be parsed for one segment
+      expect { instance.each_segment.take(2) }
+        .not_to change(calls, :size).from(1) # still the same first file being parsed cos it has 3 segments
+      expect { instance.each_segment.take(4) }
+        .to change(calls, :size).from(1).to(2) # parses the next file that has 2 segments
+      expect { instance.each_segment.to_a }
+        .to change(calls, :size).from(2).to(3) # parses all the files
     end
 
     it "works with all kinds of yaml, but doesn't offer line numbers for everything" do
