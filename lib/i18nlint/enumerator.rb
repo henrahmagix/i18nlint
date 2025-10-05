@@ -30,13 +30,19 @@ module I18nLint
 
   # Using an I18n backend to load and parse the files ensures consistency in syntactical restrictions.
   class Backend < ::I18n::Backend::Simple
-    RETURN_ARITY = I18n::VERSION.to_f >= 1.9 ? 2 : 1
     # We're overloading so we can capture line numbers when parsing YAML.
-    def load_yml(filename)
-      data = YamlWithLines.unsafe_load_file(filename, symbolize_names: true, freeze: true)
-      RETURN_ARITY == 2 ? [data, true] : data
-    rescue StandardError, ScriptError => e
-      raise I18n::InvalidLocaleData.new(filename, e.inspect)
+    if I18n::VERSION.to_f < 1.9
+      def load_yml(filename)
+        YamlWithLines.unsafe_load_file(filename, symbolize_names: true, freeze: true)
+      rescue StandardError, ScriptError => e
+        raise I18n::InvalidLocaleData.new(filename, e.inspect)
+      end
+    else
+      def load_yml(filename)
+        [YamlWithLines.unsafe_load_file(filename, symbolize_names: true, freeze: true), true]
+      rescue StandardError, ScriptError => e
+        raise I18n::InvalidLocaleData.new(filename, e.inspect)
+      end
     end
     alias load_yaml load_yml # aliased methods don't get overloaded, so re-alias
   end
