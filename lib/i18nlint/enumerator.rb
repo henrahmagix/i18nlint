@@ -31,7 +31,7 @@ module I18nLint
   # Using an I18n backend to load and parse the files ensures consistency in syntactical restrictions.
   class Backend < ::I18n::Backend::Simple
     # We're overloading so we can capture line numbers when parsing YAML.
-    if I18n::VERSION.to_f < 1.9
+    if Gem::Version.new(I18n::VERSION) < Gem::Version.new("1.9")
       def load_yml(filename)
         YamlWithLines.unsafe_load_file(filename, symbolize_names: true, freeze: true)
       rescue StandardError, ScriptError => e
