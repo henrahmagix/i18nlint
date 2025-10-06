@@ -10,10 +10,10 @@ require "i18nlint/highlighters/colour"
 module I18nLint
   # Run the linter in your terminal.
   class CLI
-    def self.run = new.run
+    def self.run(...) = new.run(...)
 
-    def run # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
-      conf = Configuration.new.tap do |conf|
+    def config(args) # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
+      Configuration.new(args).tap do |conf|
         conf.on_problems { |e| warn e.message }
 
         conf.load_from_argv_and_file!
@@ -37,11 +37,19 @@ module I18nLint
           warn
         end
       end
+    end
 
-      linter = Linter.new(filepaths: ARGV, source_locale: conf.source_locale)
+    def run(args = []) # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
+      conf = config(args)
+      linter = Linter.new(filepaths: conf.filepaths, source_locale: conf.source_locale)
 
-      if [linter.num_files, Registry.rules.size].min.zero?
-        puts "No files given or rules configured"
+      if linter.num_files.zero?
+        puts "No files given"
+        exit 0
+      end
+
+      if Registry.rules.empty?
+        puts "No rules configured"
         exit 0
       end
 
@@ -51,22 +59,18 @@ module I18nLint
 
       puts "Inspecting #{linter.num_files} files"
       linter.run
-      puts
-      puts "Comparing segments to source #{conf.source_locale}"
+      puts "\nComparing segments to source #{conf.source_locale}"
       linter.run_comparison
-      puts
-      puts
+      puts "\n\n"
 
       if linter.offences.empty?
         puts "No offences detected"
         exit 0
       end
 
-      puts "Offences:"
-      puts
+      puts "Offences:\n\n"
       puts linter.offences.map { format_offence(_1) }.join("\n\n")
-      puts
-      puts "#{linter.offences.size} offences detected"
+      puts "\n#{linter.offences.size} offences detected"
       exit 1
     end
 

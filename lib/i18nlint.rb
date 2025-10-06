@@ -8,13 +8,15 @@ require_relative "i18nlint/registry"
 require_relative "i18nlint/rule"
 require_relative "i18nlint/enumerator"
 
+require_relative "i18nlint/railtie" if defined?(Rails::Railtie)
+
 # Detect various "offences" in your I18n files.
 module I18nLint
   def self.lint(filepaths, source_locale: nil)
     linter = Linter.new(filepaths:, source_locale:)
     linter.run
     linter.run_comparison
-    linter.offences.empty? || linter.offences
+    linter.offences
   end
 
   def self.register_rule(rule)

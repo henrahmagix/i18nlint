@@ -3,7 +3,8 @@
 module I18nLint
   # Central store of which locale is the source (only useful for comparative rules) and loading + registering rules.
   class Configuration
-    def initialize(source_locale: "", rule_options: {}, requires: [])
+    def initialize(args, source_locale: "", rule_options: {}, requires: [])
+      @args = args
       @source_locale = source_locale.upcase
       @rule_options = rule_options
       @requires = requires
@@ -11,6 +12,7 @@ module I18nLint
 
     def load_from_argv_and_file!
       parse_argv
+      @filepaths = @args # remaining after being parsed
       @rule_options.merge!(load_rule_options_from_file)
       @remaining_rule_options = rule_options.dup
       @requires += @remaining_rule_options.delete("require") || []
@@ -22,7 +24,7 @@ module I18nLint
 
     def help = @parser.help
 
-    attr_reader :source_locale, :requires, :rule_options,
+    attr_reader :filepaths, :source_locale, :requires, :rule_options,
                 :config_file_does_not_exist, :remaining_rule_options
 
     def register_rules!
@@ -47,10 +49,11 @@ module I18nLint
           @source_locale = v.upcase
         end
         parser.on("--config=CONFIG", "The configuration of rules.") do |v|
-          warn "Ignoring --config=#{@config_filepath}" if @config_filepath
           @config_filepath = v
         end
-      end.tap(&:parse!)
+
+        parser.parse!(@args)
+      end
     end
 
     def config_filepath

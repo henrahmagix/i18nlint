@@ -38,5 +38,8 @@ module Dummy
 
     # Don't generate system test files.
     config.generators.system_tests = nil
+
+    config.i18n.enforce_available_locales = true
+    config.i18n.default_locale = :ar
   end
 end

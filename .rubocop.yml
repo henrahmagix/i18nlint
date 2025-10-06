@@ -3,6 +3,7 @@ AllCops:
   NewCops: enable
   Exclude:
     - gemfiles/*.gemfile
+    - spec/dummy/**/*
 
 Style/StringLiterals:
   EnforcedStyle: double_quotes

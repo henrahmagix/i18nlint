@@ -24,57 +24,43 @@ RSpec.describe I18nLint::CLI do
   end
 
   it "fails without a --source" do
-    stub_const "::ARGV", []
-    expect { described_class.run }
+    expect { described_class.run([]) }
       .to system_exit(1)
       .and print_help
   end
 
   it "fails when --config does not exist" do
-    stub_const "::ARGV", ["--source", "FR", "--config", "unknown/config.yml"]
-    expect { described_class.run }
+    expect { described_class.run(["--source", "FR", "--config", "unknown/config.yml"]) }
       .to system_exit(1)
       .and print_help(with: "Config file does not exist: unknown/config.yml")
   end
 
   it "exits 0 when no files are given" do
-    stub_const "::ARGV", ["--source", "FR"]
-    expect { described_class.run }
+    expect { described_class.run(["--source", "FR"]) }
       .to system_exit(0)
-      .and output("No files given or rules configured\n").to_stdout
+      .and output("No files given\n").to_stdout
   end
 
   it "exits 0 when no rules are defined" do
     allow(I18nLint::Rule).to receive(:rule_classes).and_return []
     allow(I18nLint::Registry).to receive(:rules).and_return []
-    stub_const "::ARGV", ["--source=fr", "spec/examples/**/*.yml"]
-    expect { described_class.run }
+    expect { described_class.run(["--source=fr", "spec/examples/**/*.yml"]) }
       .to system_exit(0)
-      .and output("No files given or rules configured\n").to_stdout
+      .and output("No rules configured\n").to_stdout
       .and output(anything).to_stderr # suppress
-  end
-
-  it "warns about multiple --config arguments" do
-    stub_const "::ARGV", ["--source=fr", "--config=foo", "--config=spec/examples/cli/config.yml"]
-    expect { described_class.run }
-      .to system_exit(0)
-      .and output(include("Ignoring --config=foo")).to_stderr
-      .and output(anything).to_stdout # suppress
   end
 
   context "with spec/example rules allowed" do
     ignore_test_rules except: "**/spec/examples/**/*"
 
-    before do
-      stub_const "ARGV", ["--source", source, "--config=spec/examples/cli/config.yml", *Array(files)]
-    end
+    let(:args) { ["--source", source, "--config=spec/examples/cli/config.yml", *Array(files)] }
 
     context "without any offending I18n" do
       let(:source) { "pl" }
       let(:files) { "spec/examples/cli/locales/good.yml" }
 
       it "exits 0 without any offences" do
-        expect { described_class.run }
+        expect { described_class.run(args) }
           .to system_exit(0)
           .and output(anything).to_stderr # suppress
           .and output(<<~OUT).to_stdout
@@ -93,7 +79,7 @@ RSpec.describe I18nLint::CLI do
       let(:files) { "spec/examples/cli/locales/*" }
 
       it "prints the offences and exits 0" do
-        expect { described_class.run }
+        expect { described_class.run(args) }
           .to system_exit(1)
           .and output(anything).to_stderr # suppress for this test
           .and output(<<~OUT).to_stdout
@@ -142,7 +128,7 @@ RSpec.describe I18nLint::CLI do
 
       it "warns about unused rules and configuration, and any unhandled I18nLint::Errors that occur" do
         expect do
-          described_class.run
+          described_class.run(args)
         rescue SystemExit
           nil
         end

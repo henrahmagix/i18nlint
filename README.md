@@ -21,13 +21,59 @@ gem install i18nlint i18nlint-0.1.0.gem
 
 ## Usage
 
-As a command-line tool:
+### Rails
+This task depends on the Rails task `:environment`, so your application will be loaded, including your I18n configuration, to detect your `I18n.default_locale`.
+
+If there's a `.i18nlint.yml` config file in the root folder, it'll get loaded automatically.
 ```bash
-i18nlint --source=en --config=.i18nlint.yml config/locales/*.yml
+bin/rails i18nlint
 ```
-with:
+
+### CLI
+As a command-line tool with arguments:
+```bash
+i18nlint --source=en --config=lint.yml config/locales/*.yml
+```
+
+### Ruby
+```rb
+require "i18nlint"
+
+class MyRule < I18nLint::Rule
+  def on_segment(segment)
+    if (match = segment.text.match /some kind of match/)
+      add_segment_offence(segment, "this is my custom message", highlight: match.offset(0))
+    end
+  end
+  def on_file(file)
+    # add_file_offence(file)
+  end
+  def on_segment_comparison(segment, source_segment)
+    # add_segment_compare_offence(segment, source_segment, highlight: [], source_highlight: [])
+  end
+end
+I18nLint.register_rule(MyRule)
+
+offences = I18nLint.lint("config/locales/*.yml", source_locale: "en") # array of offences
+
+# Each offence has the `rule` that added it, the `filepath`, `lineno`, and `text` of the segment or file, and an optional `message` string.
+# Segment offences also have `locale` and their full `key`.
+# It may also contain a `highlight` array of match offsets pointing to the exact location of the offence in `text`.
+# Also if `source_offence` is not nil, it holds the same attributes but about the segment of the same key defined under the source locale.
+offences.each do |o|
+  puts "#{o.rule} offence at #{o.filepath}:#{o.lineno}"
+  puts "#{o.key} in locale: #{o.locale}" unless o.is_a?(I18nLint::FileOffence)
+  puts "compared to #{o.source_offence.key} in source #{o.source_offence.locale}" if o.source_offence
+  puts o.text, o.message
+end
+```
+
+### Configuration
+
+A YAML file named `.i18nlint.yml` is looked for automatically in the current directory and your home directory.
+
+It can be used to add your own rules and configure them.
 ```yml
-# .i18nlint.yml
 require:
   - ./path/to/my/rule
   - ./path/to/other/rule
@@ -35,13 +81,13 @@ require:
 BuiltIn/Interpolations:
   Enabled: false # disable a built-in that always runs; all rules are enabled by default
 
-My/Rule: # this matches a class named My::Rule, required by any of the `require:` paths above
+MyRules/Amazing: # this matches a class named MyRules::Amazing, defined in any of the `require:` paths above
   Enabled: true
   Exclude:  # every rule config can have a list of Pathname#fnmatch to exclude
     - '*.exclude.yml'
 
 match-segment:
-  # A list of `Pattern:` configurations to search for, where each match is an offence.
+  # A list of `Pattern:` configurations to search for in each individual segment, where each match is an offence.
   - Pattern: 'https://.*\.example.org'
   - Pattern: 'https://.*\.bad.url'
     Exclude:
@@ -49,33 +95,15 @@ match-segment:
   - Pattern: 'Word'
     CaseSensitive: false # makes the Regexp made from Pattern case-insensitive with Regexp::IGNORECASE
 
-match-file: # same as match-segment but passes in a whole file
+match-file:
+  # Same as match-segment but passes in a whole file
+  - Pattern: something
 
 mismatch-to-source:
   # Same as match-segment but it matches on both translated segments and their
   # source, and then compares the matches: if there are any that are in the
   # source locale but not the translation, or vice versa, an offence is marked.
   - Pattern: '\[[A-Z_]+\]' # some custom tags used in your renderer like `[NAME]`, `[EMAIL_ADDRESS]`, etc.
-```
-
-Or in Ruby:
-```rb
-require "i18nlint"
-
-class MyRule < I18nlint::Rule
-  def on_segment(segment)
-    if (match = segment.text.match /some kind of match/)
-      add_offence(segment, "this is my custom message", highlight: match.offset(0))
-    end
-  end
-end
-I18nLint.register_rule(MyRule)
-
-offences = I18nLint.lint("config/locales/*.yml", source_locale: "en") # array of offences
-
-# Each offence has the `rule` that added it, the `filepath`, `lineno`, and `text` of the segment, and an optional `message` string.
-# It may also contain a `highlight` array of match offsets pointing to the exact location of the offence in `text`.
-# Also if `source_offence` is not nil, it holds the same attributes but about the source segment i.e. the source French for `source_locale: "fr"` or the source English for `source_locale: "en"`.
 ```
 
 ## Development
