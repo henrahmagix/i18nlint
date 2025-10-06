@@ -26,12 +26,14 @@ module I18nLint
     end
 
     def run
-      @enum.each_file do |i18n_file|
+      each_file do |i18n_file|
         tick(@tick_each_file, Registry.rules.sum do |rule|
           next 0 if rule.excluded?(i18n_file.filepath)
 
           rule.on_file(i18n_file.clone)
-          @enum.each_segment(file: i18n_file) { |segment| rule.on_segment(segment.clone) }
+          each_segment(file: i18n_file) do |segment|
+            rule.on_segment(segment.clone)
+          end
           rule.take_offences.tap { offences.concat(_1) }.size
         end)
       end
@@ -49,21 +51,33 @@ module I18nLint
     end
 
     def each_file(&)
-      @enum.each_file(&)
+      @enum.each_file do |file|
+        yield file
+      rescue Error # coming from a segment?
+        raise
+      rescue StandardError => e
+        raise ErrorOnFile.new file, e
+      end
     end
 
-    def each_segment(&)
-      @enum.each_segment(&)
+    def each_segment(file: nil, &)
+      @enum.each_segment(file:) do |segment|
+        yield segment
+      rescue StandardError => e
+        raise ErrorOnSegment.new segment, e
+      end
     end
 
     def each_segment_comparison(&)
       comparisons = ComparisonMap.new(source_locale)
       # Slurp all the files first, so we can separate the source segments from translation segments.
-      @enum.each_segment do |segment|
-        comparisons.add(segment)
-      end
+      each_segment { comparisons.add(_1) }
       comparisons.freeze
-      comparisons.each(&)
+      comparisons.each do |segment, source_segment|
+        yield [segment, source_segment]
+      rescue StandardError => e
+        raise ErrorOnSegmentComparison.new segment, source_segment, e
+      end
     end
 
     private

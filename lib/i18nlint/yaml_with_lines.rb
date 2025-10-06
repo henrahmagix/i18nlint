@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
+# TODO: get line numbers for sequences, e.g.
+# abbr_month_names: [~, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec]
+
 module I18nLint
   # Parse YAML such that every value is a ValueWithLineNumbers.
   class YamlWithLines
