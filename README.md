@@ -62,7 +62,7 @@ offences = I18nLint.lint("config/locales/*.yml", source_locale: "en") # array of
 # Also if `source_offence` is not nil, it holds the same attributes but about the segment of the same key defined under the source locale.
 offences.each do |o|
   puts "#{o.rule} offence at #{o.filepath}:#{o.lineno}"
-  puts "#{o.key} in locale: #{o.locale}" unless o.is_a?(I18nLint::FileOffence)
+  puts "#{o.key} in locale: #{o.locale}" unless o.locale && o.key
   puts "compared to #{o.source_offence.key} in source #{o.source_offence.locale}" if o.source_offence
   puts o.text, o.message
 end

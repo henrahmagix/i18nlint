@@ -39,6 +39,14 @@ RSpec.describe I18nLint::Enumerator do
       .to match_array %w[en:one en:nested.one fr:one fr:nested.one de:one de:nested.one es:one es:nested.one]
   end
 
+  it "doesn't enumerate into a segment of sequence values" do
+    instance = described_class.new(examples_dir.join("types/sequence.yml"), source_locale: "en")
+
+    expect(instance.each_segment.to_a).to contain_exactly(
+      have_attributes(filepath: end_with("sequence.yml"), lineno: 2, key: "array", value: [nil, 1, 2, "three", "four"])
+    )
+  end
+
   it "each segment can say if it's the source locale" do
     instance = described_class.new(examples_dir.join("enumerator/*.yml"), source_locale: "en")
 
@@ -139,53 +147,35 @@ RSpec.describe I18nLint::Enumerator do
         stuff.UPPER:4
         stuff.false:5
         stuff.no:6
-        map_alias.some_array.0:<NO LINE>
-        map_alias.some_array.1:<NO LINE>
-        map_alias.some_array.2:<NO LINE>
-        map_alias.some_sequence.0:<NO LINE>
-        map_alias.some_sequence.1:<NO LINE>
+        map_alias.some_array:9
+        map_alias.some_sequence:11
         map_alias.some_hash.c:13
         map_alias.some_hash.d:13
         map_alias.some_map.e:15
         map_alias.some_map.f:16
-        map_copied.some_array.0:<NO LINE>
-        map_copied.some_array.1:<NO LINE>
-        map_copied.some_array.2:<NO LINE>
-        map_copied.some_sequence.0:<NO LINE>
-        map_copied.some_sequence.1:<NO LINE>
+        map_copied.some_array:9
+        map_copied.some_sequence:11
         map_copied.some_hash.c:13
         map_copied.some_hash.d:13
         map_copied.some_map.e:15
         map_copied.some_map.f:16
-        map_extended.some_array.0:<NO LINE>
-        map_extended.some_array.1:<NO LINE>
-        map_extended.some_array.2:<NO LINE>
-        map_extended.some_sequence.0:<NO LINE>
-        map_extended.some_sequence.1:<NO LINE>
+        map_extended.some_array:9
+        map_extended.some_sequence:11
         map_extended.some_hash.c:13
         map_extended.some_hash.d:13
         map_extended.some_map.e:15
         map_extended.some_map.f:16
-        map_extended.nested_sequence.0.a:21
-        map_extended.nested_sequence.0.b:22
-        map_extended.nested_sequence.1.a:23
-        map_extended.nested_sequence.1.b:24
+        map_extended.nested_sequence:21
         map_alias_2.foo:27
-        map_copied_2.1.some_array.0:<NO LINE>
-        map_copied_2.1.some_array.1:<NO LINE>
-        map_copied_2.1.some_array.2:<NO LINE>
-        map_copied_2.1.some_sequence.0:<NO LINE>
-        map_copied_2.1.some_sequence.1:<NO LINE>
+        map_copied_2.1.some_array:9
+        map_copied_2.1.some_sequence:11
         map_copied_2.1.some_hash.c:13
         map_copied_2.1.some_hash.d:13
         map_copied_2.1.some_map.e:15
         map_copied_2.1.some_map.f:16
         map_copied_2.2.foo:27
-        map_extended_2.1.some_array.0:<NO LINE>
-        map_extended_2.1.some_array.1:<NO LINE>
-        map_extended_2.1.some_array.2:<NO LINE>
-        map_extended_2.1.some_sequence.0:<NO LINE>
-        map_extended_2.1.some_sequence.1:<NO LINE>
+        map_extended_2.1.some_array:9
+        map_extended_2.1.some_sequence:11
         map_extended_2.1.some_hash.c:13
         map_extended_2.1.some_hash.d:13
         map_extended_2.1.some_map.e:15

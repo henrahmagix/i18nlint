@@ -38,8 +38,6 @@ module I18nLint
           yield key_parts, val.value, val.lines.first, val.lines.last
         when Hash
           val.each { |each_key, each_val| walk(each_val, key_parts + [each_key], &block) }
-        when Enumerable
-          val.each_with_index { |each_val, each_key| walk(each_val, key_parts + [each_key], &block) }
         else
           yield key_parts, val
         end
@@ -75,6 +73,15 @@ class Psych::Nodes::ScalarWithLineNumber < Psych::Nodes::Scalar # rubocop:disabl
   end
 end
 
+class Psych::Nodes::SequenceWithLineNumber < Psych::Nodes::Sequence # rubocop:disable Style/Documentation,Style/ClassAndModuleChildren
+  attr_reader :line_number
+
+  def initialize(*args, line_number)
+    super(*args)
+    @line_number = line_number
+  end
+end
+
 class Psych::TreeWithLineNumbersBuilder < Psych::TreeBuilder # rubocop:disable Style/Documentation,Style/ClassAndModuleChildren
   attr_accessor :parser
 
@@ -83,11 +90,27 @@ class Psych::TreeWithLineNumbersBuilder < Psych::TreeBuilder # rubocop:disable S
     @last.children << node
     node
   end
+
+  def start_sequence(*args)
+    node = Psych::Nodes::SequenceWithLineNumber.new(*args, parser.mark.line)
+    @last.children << node
+    push node
+  end
+
+  def end_sequence
+    node = pop
+    set_end_location(node)
+    node
+  end
 end
 
 class Psych::Visitors::ToRubyWithLineNumbers < Psych::Visitors::ToRuby # rubocop:disable Style/Documentation,Style/ClassAndModuleChildren
   def visit_Psych_Nodes_ScalarWithLineNumber(node) # rubocop:disable Naming/MethodName
     visit_Psych_Nodes_Scalar(node)
+  end
+
+  def visit_Psych_Nodes_SequenceWithLineNumber(node) # rubocop:disable Naming/MethodName
+    visit_Psych_Nodes_Sequence(node)
   end
 
   private
@@ -101,6 +124,11 @@ class Psych::Visitors::ToRubyWithLineNumbers < Psych::Visitors::ToRuby # rubocop
         start_line = end_line = v.line_number + 1
 
         start_line = k.line_number + 1 if k.is_a? Psych::Nodes::ScalarWithLineNumber
+        val = I18nLint::YamlWithLines::ValueWithLineNumbers.new(val, start_line..end_line)
+      elsif v.is_a? Psych::Nodes::SequenceWithLineNumber
+        start_line = end_line = v.line_number + 1
+
+        start_line = k.line_number + 1 if k.is_a? Psych::Nodes::SequenceWithLineNumber
         val = I18nLint::YamlWithLines::ValueWithLineNumbers.new(val, start_line..end_line)
       end
 

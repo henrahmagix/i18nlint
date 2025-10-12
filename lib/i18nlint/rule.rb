@@ -2,13 +2,17 @@
 
 module I18nLint
   # A registered offence as reported by a rule.
-  FileOffence = Struct.new(:rule, :filepath, :lineno, :text, :message, :highlight) do
-    def source_offence = nil
+  # TODO: refactor :text to :value.
+  FileOffence = Struct.new(:rule, :filepath, :lineno, :text, :message, :highlight, keyword_init: true) do
+    def key = nil
+    def locale = nil
+    def source_locale = nil
   end
-  SegmentOffence = Struct.new(:rule, :filepath, :lineno, :locale, :key, :text, :message, :highlight) do
-    def source_offence = nil
+  # TODO: allow rules to get plural segment hashes, somehow.
+  SegmentOffence = Struct.new(*FileOffence.members, :value, :locale, :key, keyword_init: true) do
+    def source_locale = nil
   end
-  CompareSegmentOffence = Struct.new(*SegmentOffence.members, :source_offence)
+  CompareSegmentOffence = Struct.new(*SegmentOffence.members, :source_offence, keyword_init: true)
 
   # Base class for Class rule types.
   class Rule
@@ -77,12 +81,12 @@ module I18nLint
 
     def add_file_offence(file, msg = nil, lineno: nil, source: nil, highlight: nil)
       @offences << FileOffence.new(
-        describe,
-        file.filepath,
-        lineno,
-        source, # don't print the whole file contents in the offence
-        msg || message,
-        highlight
+        rule: describe,
+        filepath: file.filepath,
+        lineno:,
+        text: source, # don't print the whole file contents in the offence
+        message: msg || message,
+        highlight:
       )
     end
 
@@ -109,14 +113,14 @@ module I18nLint
 
     def make_segment_offence(offence_class, segment, description, message, highlight:)
       offence_class.new(
-        description,
-        segment.filepath,
-        segment.lineno,
-        segment.locale,
-        segment.key,
-        segment.text,
-        message,
-        highlight
+        rule: description,
+        filepath: segment.filepath,
+        lineno: segment.lineno,
+        locale: segment.locale,
+        key: segment.key,
+        text: segment.text,
+        message:,
+        highlight:
       )
     end
   end

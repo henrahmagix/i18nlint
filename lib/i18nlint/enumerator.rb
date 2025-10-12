@@ -20,7 +20,7 @@ module I18nLint
     def json? = @is_json
   end
 
-  Segment = CloneableStruct.new(:file, :lineno, :key, :text, :locale, :source_locale, keyword_init: true) do
+  Segment = CloneableStruct.new(:file, :lineno, :key, :text, :value, :locale, :source_locale, keyword_init: true) do
     def filepath = file.filepath
 
     def source?
@@ -28,6 +28,8 @@ module I18nLint
     end
 
     def interpolations
+      return [] if text.to_s.empty?
+
       handler = I18n.config.missing_interpolation_argument_handler
       keys = []
       I18n.config.missing_interpolation_argument_handler = proc { keys << _1 }
@@ -66,10 +68,9 @@ module I18nLint
       @filepaths = Dir[*Array(filepaths).map(&:to_s)]
       @source_locale = source_locale
 
-      I18n.backend = Backend.new
+      @i18n_backend = Backend.new
 
       @parsed_files_by_filepath = {}
-      @segments_by_filepath = Hash.new { |h, filepath| h[filepath] = [] }
     end
 
     def num_files
@@ -81,7 +82,7 @@ module I18nLint
         @filepaths.each do |filepath|
           yielder << @parsed_files_by_filepath[filepath] ||= File.new(
             filepath:,
-            parsed: I18n.backend.send(:load_file, filepath),
+            parsed: @i18n_backend.load_file(filepath),
             raw: ::File.read(filepath)
           )
         end
@@ -94,12 +95,22 @@ module I18nLint
           next if file && i18n_file != file
 
           YamlWithLines.walk(i18n_file.parsed) do |(locale, *key_parts), text, line_start, _line_end|
-            full_key = key_parts.join(".")
-            segment = Segment.new(file: i18n_file, lineno: line_start, key: full_key, text:, locale:, source_locale:)
-            yielder << segment
+            text, value = determine_text_and_value(text)
+            yielder << Segment.new(file: i18n_file, lineno: line_start, key: key_parts.join("."), text:, value:,
+                                   locale:, source_locale:)
           end
         end
       end.each(&block)
+    end
+
+    private
+
+    def determine_text_and_value(text)
+      if text.is_a?(String)
+        [text, nil]
+      else
+        [nil, text]
+      end
     end
   end
 end
