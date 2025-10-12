@@ -8,7 +8,8 @@ module I18nLint
       task :i18nlint, [:filepaths] => [:environment] do |_t, args|
         config = Rails.application.config
 
-        filepaths = args.fetch(:filepaths, I18n.load_path)
+        filepaths = args[:filepaths]
+        filepaths ||= I18n.load_path.select { _1.start_with?(Rails.root.to_s) }
 
         require "i18nlint/cli"
         I18nLint::CLI.run(["--source=#{config.i18n.default_locale}", *filepaths])

@@ -23,11 +23,10 @@ task :exe do
   end
 end
 
+require_relative "spec/support/system_in_dummy_app"
 task :railtie do
   puts "Testing railtie..."
-  # We must unset bundler env so the system call can set its own bundle env as per the dummy app folder.
-  env_without_bundler = ENV.reject { |k, _v| k.start_with?("BUNDLE") }
-  system(env_without_bundler, "bin/rails i18nlint", unsetenv_others: true, chdir: "spec/dummy")
+  SystemInDummyApp.system("bin/rails i18nlint")
   unless $CHILD_STATUS.exitstatus.zero?
     puts "Result: exit #{$CHILD_STATUS.exitstatus}. Allowing Rake to continue: failing examples are helpful to see."
   end

@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 7.2.2", ">= 7.2.2.2"
+gem "rails", "~> 8"
 
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem "tzinfo-data", platforms: %i[ mswin mswin64 mingw x64_mingw jruby ]
@@ -10,3 +10,5 @@ group :development, :test do
 end
 
 gem "i18nlint", "~> 0.1.0", path: "../.."
+
+gem "rails-i18n", "~> 8.0"
