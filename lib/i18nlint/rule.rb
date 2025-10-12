@@ -2,13 +2,11 @@
 
 module I18nLint
   # A registered offence as reported by a rule.
-  # TODO: refactor :text to :value.
   FileOffence = Struct.new(:rule, :filepath, :lineno, :text, :message, :highlight, keyword_init: true) do
     def key = nil
     def locale = nil
     def source_locale = nil
   end
-  # TODO: allow rules to get plural segment hashes, somehow.
   SegmentOffence = Struct.new(*FileOffence.members, :value, :locale, :key, keyword_init: true) do
     def source_locale = nil
   end

@@ -39,11 +39,41 @@ RSpec.describe I18nLint::Enumerator do
       .to match_array %w[en:one en:nested.one fr:one fr:nested.one de:one de:nested.one es:one es:nested.one]
   end
 
-  it "doesn't enumerate into a segment of sequence values" do
+  it "makes a segment for sequence values, where `:value` is set whilst `:text` is nil" do
     instance = described_class.new(examples_dir.join("types/sequence.yml"), source_locale: "en")
 
+    filepath = end_with("sequence.yml")
+
     expect(instance.each_segment.to_a).to contain_exactly(
-      have_attributes(filepath: end_with("sequence.yml"), lineno: 2, key: "array", value: [nil, 1, 2, "three", "four"])
+      have_attributes(filepath:, lineno: 2, key: "array", text: nil, value: [nil, 1, 2, "three", "four"])
+    )
+  end
+
+  it "makes a segment for plural values, where `:value` is set to the hash whilst `:text` is nil" do
+    instance = described_class.new(examples_dir.join("types/plurals.yml"), source_locale: "en")
+
+    filepath = end_with("plurals.yml")
+    key = "how_many"
+
+    # I18n < 1.9.1 doesn't symbolize the keys, so we do it here to have passing tests across all versions.
+    segments = instance.each_segment.to_a
+    segments.each do |segment|
+      segment.locale = segment.locale.to_sym
+      segment.value.transform_keys!(&:to_sym)
+    end
+
+    expect(segments).to contain_exactly(
+      have_attributes(filepath:, lineno: 3, locale: :en, key:, text: nil,
+                      value: { one: "One", other: "More than one" }),
+      have_attributes(filepath:, lineno: 7, locale: :fr, key:, text: nil,
+                      value: { one: "Un", other: "Pas un" }),
+      have_attributes(filepath:, lineno: 11, locale: :pl, key:, text: nil,
+                      value: {
+                        one: "Jeden",
+                        few: "Od dwóch do czterech",
+                        many: "Od pięciu do dziewięciu",
+                        other: "Nieużywane"
+                      })
     )
   end
 

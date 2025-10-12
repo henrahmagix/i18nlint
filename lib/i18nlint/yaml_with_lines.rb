@@ -32,14 +32,27 @@ module I18nLint
         handler.root
       end
 
-      def walk(val, key_parts = [], &block)
+      def walk(val, key_parts = [], yield_hash_when: nil, &block)
+        case val
+        when ValueWithLineNumbers then yield key_parts, val.value, *first_last_lines(val)
+        when Hash
+          if yield_hash_when&.call(val)
+            yield key_parts, val.transform_values(&:value), *first_last_lines(val)
+          else
+            val.each { |each_key, each_val| walk(each_val, key_parts + [each_key], yield_hash_when:, &block) }
+          end
+        else yield key_parts, val
+        end
+      end
+
+      private
+
+      def first_last_lines(val)
         case val
         when ValueWithLineNumbers
-          yield key_parts, val.value, val.lines.first, val.lines.last
+          [val.lines.first, val.lines.last]
         when Hash
-          val.each { |each_key, each_val| walk(each_val, key_parts + [each_key], &block) }
-        else
-          yield key_parts, val
+          [val.values.first.lines.first, val.values.last.lines.last]
         end
       end
     end

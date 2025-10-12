@@ -94,7 +94,7 @@ module I18nLint
         each_file do |i18n_file|
           next if file && i18n_file != file
 
-          YamlWithLines.walk(i18n_file.parsed) do |(locale, *key_parts), text, line_start, _line_end|
+          YamlWithLines.walk(i18n_file.parsed, yield_hash_when:) do |(locale, *key_parts), text, line_start, _line_end|
             text, value = determine_text_and_value(text)
             yielder << Segment.new(file: i18n_file, lineno: line_start, key: key_parts.join("."), text:, value:,
                                    locale:, source_locale:)
@@ -104,6 +104,13 @@ module I18nLint
     end
 
     private
+
+    def yield_hash_when
+      proc do |hash|
+        keys = hash.keys.map(&:to_s)
+        keys.include?("one") && (keys.include?("few") || keys.include?("many") || keys.include?("other"))
+      end
+    end
 
     def determine_text_and_value(text)
       if text.is_a?(String)

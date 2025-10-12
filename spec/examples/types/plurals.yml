@@ -1,0 +1,14 @@
+en:
+  how_many:
+    one: One
+    other: More than one
+fr:
+  how_many:
+    one: Un
+    other: Pas un
+pl:
+  how_many:
+    one: Jeden
+    few: Od dwóch do czterech
+    many: Od pięciu do dziewięciu
+    other: Nieużywane
