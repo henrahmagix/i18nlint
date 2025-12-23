@@ -4,8 +4,6 @@ require "optparse"
 require "yaml"
 
 require "i18nlint"
-require "i18nlint/highlighters/below_line"
-require "i18nlint/highlighters/colour"
 
 module I18nLint
   # Run the linter in your terminal.
@@ -128,11 +126,7 @@ module I18nLint
 
       range = [range] unless range[0].is_a?(Array)
 
-      if $stdout.isatty
-        Highlighters::Colour.indicate(text, *range)
-      else
-        Highlighters::BelowLine.indicate(text, *range)
-      end
+      Highlighters.indicate(text, *range)
     end
   end
 end
