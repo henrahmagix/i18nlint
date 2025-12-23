@@ -2,7 +2,7 @@
 
 module ResetGlobalState
   def self.setup
-    @original_rules = I18nLint::Registry.rules.clone
+    @original_rules = I18nLint::Registry.instance_variable_get(:@rules).clone
   end
 
   def self.reset
