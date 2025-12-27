@@ -66,12 +66,12 @@ module I18nLint
       @exclude.any? { |dir_pattern| path.fnmatch(dir_pattern) }
     end
 
-    def add_offence(item, message = nil)
+    def add_offence(item, message = nil, highlight: nil)
       case item
       when File
-        add_file_offence(item, message)
+        add_file_offence(item, message, highlight:)
       when Segment
-        add_segment_offence(item, message)
+        add_segment_offence(item, message, highlight:)
       else
         raise ArgumentError, "inapplicable offence type #{item.class}: #{item}"
       end

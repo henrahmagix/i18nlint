@@ -18,3 +18,7 @@ Metrics/BlockLength:
   Exclude:
     - spec/**/*
     - i18nlint.gemspec
+
+Style/SignalException:
+  Exclude:
+    - spec/**/*_spec.rb # see rspec/matchers/fail_matchers

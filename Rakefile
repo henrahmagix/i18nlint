@@ -7,7 +7,6 @@ require "rspec/core/rake_task"
 RSpec::Core::RakeTask.new(:spec).tap do |rspec_task|
   rspec_task.verbose = false
   rspec_task.fail_on_error = true
-  rspec_task.rspec_opts = %w[--tag focus]
   rspec_task.rspec_opts += ["--seed", ENV["SEED"]] if ENV["SEED"]
 end
 
