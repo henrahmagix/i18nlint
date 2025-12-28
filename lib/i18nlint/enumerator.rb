@@ -39,12 +39,13 @@ module I18nLint
       $VERBOSE = verbosity
     end
 
+    ORIG_YAML = Object.const_get(:YAML)
+
     def load_file(filepath)
-      yaml = Object.const_get(:YAML)
       suppress_warnings { Object.const_set(:YAML, YamlWithLines) }
       super
     ensure
-      suppress_warnings { Object.const_set(:YAML, yaml) }
+      suppress_warnings { Object.const_set(:YAML, ORIG_YAML) }
     end
   end
 

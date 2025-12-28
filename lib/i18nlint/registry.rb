@@ -13,7 +13,7 @@ module I18nLint
     private_constant :LINT_METHODS
 
     # Avoid custom rules that will never get used.
-    class WillNeverRun < StandardError
+    class WillNeverRun < NotImplementedError
       attr_reader :rule_class
 
       def initialize(instance)
