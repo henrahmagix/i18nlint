@@ -8,13 +8,17 @@ module I18nLint
         def indicate(str, *slices, messages: [])
           slices = slices.sort
           messages = messages.dup
+
+          has_messages = !messages.empty?
+
           ensure_tuples_of(Integer, *slices)
 
           # Go line-by-line to add indicators if needed, then join at the end.
           to_enum(:highlight_per_line, str, *slices).map do |line, slices_in_this_line|
             next line if slices_in_this_line.empty?
 
-            indicators_line = make_indicators_line("^", slices_in_this_line, messages.shift(slices_in_this_line.size))
+            indicators_line = make_indicators_line("^", slices_in_this_line,
+                                                   (messages.shift(slices_in_this_line.size) if has_messages))
 
             "#{line.chomp}\n#{indicators_line}#{"\n" if line.end_with?("\n")}"
           end.join
@@ -48,10 +52,10 @@ module I18nLint
         end
 
         def make_indicators_line(char, slices, messages)
-          messages.map! { |m| m.nil? ? "<nil>" : m }
-          make_line_of(char, *slices).then do |line|
-            "#{line} #{messages.join("; ")}".rstrip
-          end
+          line = make_line_of(char, *slices)
+          return line if messages.nil?
+
+          "#{line} #{messages.map { |m| m.nil? ? "<nil>" : m }.join("; ")}".rstrip
         end
 
         def make_line_of(char, *slices)

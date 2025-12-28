@@ -84,7 +84,7 @@ RSpec.describe I18nLint::CLI do
           .and output(anything).to_stderr # suppress for this test
           .and output(<<~OUT).to_stdout
             Inspecting 10 files
-            FF.F.F....
+            FF.F.F..F.
             Comparing segments to source EN
             ...FF
 
@@ -108,12 +108,19 @@ RSpec.describe I18nLint::CLI do
                 i_am_a_german_key: 'Was gehn der alter?'
                        ^^^^^^
 
-            spec/examples/cli/locales/interpolations.yml:4 in fr.welcome: BuiltIn/Interpolations: missing in fr: name
+            spec/examples/cli/locales/interpolations.yml:4 in fr.welcome: BuiltIn/Interpolations: broken
               Bienvenue % {name}
-            spec/examples/cli/locales/interpolations.yml:2 in en.welcome
-              Welcome %{name}
+                        ^^^^^^^^
 
-            spec/examples/cli/locales/raise_brackets_comparison.rb: in fr.brackets2: mismatch-to-source /\\[[A-Z_]+\\]/: Found mismatches to the source EN
+            Comparison: BuiltIn/Interpolations
+            spec/examples/cli/locales/interpolations.yml:4 in fr.welcome
+              Bienvenue % {name}
+            spec/examples/cli/locales/interpolations.yml:2 in en.welcome: missing in fr: name
+              Welcome %{name}
+                      ^^^^^^^
+
+            Comparison: mismatch-to-source /\\[[A-Z_]+\\]/
+            spec/examples/cli/locales/raise_brackets_comparison.rb: in fr.brackets2: Found mismatches to the source EN
               et ca c'est [VOTRE_TAG]
                           ^^^^^^^^^^^
               pour [YOUR_NAME]
@@ -122,7 +129,7 @@ RSpec.describe I18nLint::CLI do
                           ^^^^^^^^^^
               for [YOUR_NAME]
 
-            7 offences detected
+            8 offences detected
           OUT
       end
 

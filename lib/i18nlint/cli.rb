@@ -83,7 +83,8 @@ module I18nLint
     MSG
 
     COMPARE_SEGMENT_OFFENCE_DISPLAY = <<~MSG # 🏳️‍⚧️🏳️‍🌈🫶
-      %<trans_filepath>s:%<trans_lineno>s in %<trans_locale>s.%<trans_key>s: %<rule>s: %<trans_message>s
+      Comparison: %<rule>s
+      %<trans_filepath>s:%<trans_lineno>s in %<trans_locale>s.%<trans_key>s: %<trans_message>s
       %<trans_text_indented>s
       %<source_filepath>s:%<source_lineno>s in %<source_locale>s.%<source_key>s: %<source_message>s
       %<source_text_indented>s

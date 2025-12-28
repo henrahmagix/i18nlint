@@ -74,7 +74,7 @@ RSpec.describe I18nLint::RSpec::ExpectOffence do
        en:
          hello: Hello there
       -         ^^^ gone wrong here
-      +          ^^^  ^^^^^ gone wrong here
+      +          ^^^  ^^^^^ gone wrong here; gone wrong here
     DIFF
 
     fails "with a diff for a different unhighlighted offence", <<~RUBY, <<~YAML, <<~DIFF
@@ -222,7 +222,7 @@ RSpec.describe I18nLint::RSpec::ExpectOffence do
       +^ Offences without highlights: "gone wrong somewhere"
        Hello there
       -^^^ gone wrong here
-      + ^^^  ^^^^^ gone wrong here
+      + ^^^  ^^^^^ gone wrong here; gone wrong here
     DIFF
 
     fails "when there are no offences against highlighted input", <<~RUBY, <<~TXT, <<~DIFF
@@ -351,7 +351,7 @@ RSpec.describe I18nLint::RSpec::ExpectOffence do
       Bonjour tous les monde
     TXT
       Hello there
-       ^^^  ^^^^^ source is here
+       ^^^  ^^^^^ source is here; source is here
     TXT
 
     fails "with a diff for multiple different offences", <<~RUBY, :fr, <<~TXT, :en, <<~TXT, <<~DIFF
@@ -374,7 +374,7 @@ RSpec.describe I18nLint::RSpec::ExpectOffence do
        ---
        Hello there
       -^^^ gone wrong here
-      + ^^^  ^^^^^ source is here
+      + ^^^  ^^^^^ source is here; source is here
     DIFF
 
     fails "when there are no offences against highlighted input", <<~RUBY, :fr, <<~TXT, :en, <<~TXT, <<~DIFF

@@ -26,18 +26,6 @@ module I18nLint
     def source?
       locale.to_s == source_locale.to_s
     end
-
-    def interpolations
-      return [] if text.to_s.empty?
-
-      handler = I18n.config.missing_interpolation_argument_handler
-      keys = []
-      I18n.config.missing_interpolation_argument_handler = proc { keys << _1 }
-      I18n.interpolate(text, {})
-      keys
-    ensure
-      I18n.config.missing_interpolation_argument_handler = handler
-    end
   end
 
   # Using an I18n backend to load and parse the files ensures consistency in syntactical restrictions.

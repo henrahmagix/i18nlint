@@ -13,9 +13,9 @@ RSpec.describe I18nLint::Enumerator do
   end
 
   describe "Segment" do
-    it "can capture the interpolations in the text" do
-      expect(I18nLint::Segment.new(text: "hello").interpolations).to eq []
-      expect(I18nLint::Segment.new(text: "hello %{name} %{surname}").interpolations).to eq %i[name surname]
+    it "says if it's the source" do
+      expect(I18nLint::Segment.new(locale: "fr", source_locale: "en")).not_to be_source
+      expect(I18nLint::Segment.new(locale: "en", source_locale: "en")).to be_source
     end
   end
 

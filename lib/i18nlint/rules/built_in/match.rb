@@ -29,7 +29,7 @@ module I18nLint
           return unless pattern
 
           segment.text.scan(pattern) do |_match|
-            add_segment_offence(segment, nil, highlight: Regexp.last_match.offset(0))
+            add_segment_offence(segment, nil, highlight: [Regexp.last_match.offset(0)])
           end
         end
       end

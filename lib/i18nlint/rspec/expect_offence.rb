@@ -92,9 +92,9 @@ module I18nLint
       def highlight_offences(content, offences)
         highlighted, unhighlighted = offences.partition(&:highlight)
 
-        highlight_messages = highlighted.each_with_object({}) { |o, h| h[o.highlight] = o.message }
+        highlight_messages = highlighted.each_with_object({}) { |o, h| o.highlight.each { h[_1] = o.message } }
 
-        actual = ::I18nLint::Highlighters::BelowLine.indicate(content, *highlight_messages.keys.flatten(1),
+        actual = ::I18nLint::Highlighters::BelowLine.indicate(content, *highlight_messages.keys,
                                                               messages: highlight_messages.values)
 
         other = unhighlighted.filter_map(&:message).map(&:inspect).join("; ")

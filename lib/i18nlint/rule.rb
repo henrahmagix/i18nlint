@@ -1,19 +1,20 @@
 # frozen_string_literal: true
 
+require "i18nlint/rule_helper"
+
 module I18nLint
   # A registered offence as reported by a rule.
   FileOffence = Struct.new(:rule, :filepath, :lineno, :text, :message, :highlight, keyword_init: true) do
     def key = nil
     def locale = nil
-    def source_locale = nil
   end
-  SegmentOffence = Struct.new(*FileOffence.members, :value, :locale, :key, keyword_init: true) do
-    def source_locale = nil
-  end
+  SegmentOffence = Struct.new(*FileOffence.members, :value, :locale, :key, keyword_init: true)
   CompareSegmentOffence = Struct.new(*SegmentOffence.members, :source_offence, keyword_init: true)
 
   # Base class for Class rule types.
   class Rule
+    include RuleHelper
+
     attr_reader :config, :message
 
     @rule_classes = []
