@@ -8,6 +8,7 @@ RSpec::Core::RakeTask.new(:spec).tap do |rspec_task|
   rspec_task.verbose = false
   rspec_task.fail_on_error = true
   rspec_task.rspec_opts += ["--seed", ENV["SEED"]] if ENV["SEED"]
+  rspec_task.rspec_opts += ["--bisect=#{ENV["BISECT"]}"] if ENV["BISECT"]
 end
 
 require "rubocop/rake_task"
