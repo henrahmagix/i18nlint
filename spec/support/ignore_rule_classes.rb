@@ -17,7 +17,7 @@ module IgnoreRuleClasses
   module ClassMethods
     def ignore_test_rules(except: "*")
       before do
-        allow(I18nLint::Rule).to receive(:rule_classes).and_wrap_original do |m|
+        allow(::I18nLint::Rule).to receive(:rule_classes).and_wrap_original do |m|
           m.call.select do |rule_class|
             (location = rule_class.instance_variable_get(:@_inherited_location)).nil? ||
               Pathname.new(location).fnmatch(except)

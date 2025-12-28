@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "singleton"
 require "i18nlint/rule_helper"
 
 module I18nLint
@@ -11,15 +12,23 @@ module I18nLint
   SegmentOffence = Struct.new(*FileOffence.members, :value, :locale, :key, keyword_init: true)
   CompareSegmentOffence = Struct.new(*SegmentOffence.members, :source_offence, keyword_init: true)
 
-  # Base class for Class rule types.
+  # Base class for rules to extend.
   class Rule
     include RuleHelper
 
     attr_reader :config, :message
 
-    @rule_classes = []
-
     class << self
+      class RuleClasses < Array; include Singleton; end
+      private_constant :RuleClasses
+
+      def inherited(rule_class)
+        RuleClasses.instance << rule_class
+        super
+      end
+
+      def rule_classes = RuleClasses.instance
+
       def enabled_by_default? = @enable_by_default.nil? || @enable_by_default
       def on_init_blocks      = @on_init_blocks ||= []
 
@@ -33,13 +42,6 @@ module I18nLint
 
       def rule_key
         name.to_s.gsub(/^(::)?I18nLint::Rules?::/, "").gsub("::", "/")
-      end
-
-      attr_reader :rule_classes
-
-      def inherited(rule_class)
-        @rule_classes << rule_class
-        super
       end
     end
 
