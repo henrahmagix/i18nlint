@@ -50,103 +50,113 @@ RSpec.describe I18nLint::CLI do
       .and output(anything).to_stderr # suppress
   end
 
-  context "with spec/example rules allowed" do
-    ignore_test_rules except: "**/spec/examples/**/*"
+  context "without any offending I18n" do
+    let(:args) { ["--source", "pl", "--config=#{conf_file.path}", "spec/examples/cli/locales/good.yml"] }
+    let(:conf_file) { Tempfile.create(["empty", ".yml"]) }
 
-    let(:args) { ["--source", source, "--config=spec/examples/cli/config.yml", *Array(files)] }
-
-    context "without any offending I18n" do
-      let(:source) { "pl" }
-      let(:files) { "spec/examples/cli/locales/good.yml" }
-
-      it "exits 0 without any offences" do
-        expect { described_class.run(args) }
-          .to system_exit(0)
-          .and output(anything).to_stderr # suppress
-          .and output(<<~OUT).to_stdout
-            Inspecting 1 files
-            .
-            Comparing segments to source PL
+    it "exits 0 without any offences or errors" do
+      expect { described_class.run(args) }
+        .to system_exit(0)
+        .and output("").to_stderr
+        .and output(<<~OUT).to_stdout
+          Inspecting 1 files
+          .
+          Comparing segments to source PL
 
 
-            No offences detected
-          OUT
+          No offences detected
+        OUT
+    end
+  end
+
+  context "with offending interpolations and BuiltIn/Interpolations disabled" do
+    let(:args) { ["--source", "fr", "--config=#{conf_file.path}", "spec/examples/cli/locales/interpolations.yml"] }
+    let(:conf_file) do
+      Tempfile.create(["disabled_interpolations", ".yml"]).tap do |f|
+        f.write <<~YML
+          BuiltIn/Interpolations:
+            Enabled: false
+        YML
+        f.rewind
       end
     end
 
-    context "with offending I18n" do
-      let(:source) { "en" }
-      let(:files) { "spec/examples/cli/locales/*" }
+    it "exits 0 without any offences or errors" do
+      expect { described_class.run(args) }
+        .to system_exit(0)
+        .and output("").to_stderr
+        .and output(<<~OUT).to_stdout
+          Inspecting 1 files
+          .
+          Comparing segments to source FR
+          .
 
-      it "prints the offences and exits 0" do
-        expect { described_class.run(args) }
-          .to system_exit(1)
-          .and output(anything).to_stderr # suppress for this test
-          .and output(<<~OUT).to_stdout
-            Inspecting 10 files
-            FF.F.F..F.
-            Comparing segments to source EN
-            ...FF
+          No offences detected
+        OUT
+    end
+  end
 
-            Offences:
+  context "with offending I18n" do
+    let(:args) { ["--source", "en", "--config=spec/examples/cli/config.yml", "spec/examples/cli/locales/*"] }
 
-            spec/examples/cli/locales/comments.rb:6: MyScope/NoComments with AllowedPatterns: /^NOTE: /
-              # This single Ruby comment is not allowed.
-
-            spec/examples/cli/locales/comments.yml:4: MyScope/NoComments with AllowedPatterns: /^NOTE: /
-              # This is not allowed.
-              # It is a block comment that is not allowed.
-
-            spec/examples/cli/locales/comments.yml:7: MyScope/NoComments with AllowedPatterns: /^NOTE: /
-              # This single line is not allowed.
-
-            spec/examples/cli/locales/en.yml:4 in en.causes_offence: match-segment /wef/
-              This has wef in it!
-                       ^^^
-
-            spec/examples/cli/locales/fr.yml:5: match-file /German/i
-                i_am_a_german_key: 'Was gehn der alter?'
-                       ^^^^^^
-
-            spec/examples/cli/locales/interpolations.yml:4 in fr.welcome: BuiltIn/Interpolations: broken
-              Bienvenue % {name}
-                        ^^^^^^^^
-
-            Comparison: BuiltIn/Interpolations
-            spec/examples/cli/locales/interpolations.yml:4 in fr.welcome
-              Bienvenue % {name}
-            spec/examples/cli/locales/interpolations.yml:2 in en.welcome: missing in fr: name
-              Welcome %{name}
-                      ^^^^^^^
-
-            Comparison: mismatch-to-source /\\[[A-Z_]+\\]/
-            spec/examples/cli/locales/raise_brackets_comparison.rb: in fr.brackets2: Found mismatches to the source EN
-              et ca c'est [VOTRE_TAG]
-                          ^^^^^^^^^^^
-              pour [YOUR_NAME]
-            spec/examples/cli/locales/raise_brackets_comparison.rb: in en.brackets2
-              and that is [YOUR_TAG]
-                          ^^^^^^^^^^
-              for [YOUR_NAME]
-
-            8 offences detected
-          OUT
-      end
-
-      it "warns about unused rules and configuration, and any unhandled I18nLint::Errors that occur" do
-        expect do
-          described_class.run(args)
-        rescue SystemExit
-          nil
-        end
-        .to output(anything).to_stdout
-        .and output(<<~ERR).to_stderr # should exclude MissingName + MissingRuleKey; we assert on the whole output here
+    it "warns about unused rules and configuration errors, prints the offences, and exits 0" do
+      expect { described_class.run(args) }
+        .to system_exit(1)
+        .and(output(<<~ERR).to_stderr)
           Rule BadImplementation will not be used: it must respond to at least one of :on_file, :on_segment, :on_segment_comparison
           uh oh, i cannot initialize
           Unused configuration "ThisWillNotBe/Used" expects class ThisWillNotBe::Used to subclass I18nLint::Rule. If this is a rule you're expecting to be used, that means it hasn't been loaded in the `require:` list, or it doesn't subclass I18nLint::Rule.
           This is an evaluated Ruby file. The final value should be the hash of I18n.
         ERR
-      end
+        .and(output(<<~OUT).to_stdout)
+          Inspecting 10 files
+          FF.F.F..F.
+          Comparing segments to source EN
+          ...FF
+
+          Offences:
+
+          spec/examples/cli/locales/comments.rb:6: MyScope/NoComments with AllowedPatterns: /^NOTE: /
+            # This single Ruby comment is not allowed.
+
+          spec/examples/cli/locales/comments.yml:4: MyScope/NoComments with AllowedPatterns: /^NOTE: /
+            # This is not allowed.
+            # It is a block comment that is not allowed.
+
+          spec/examples/cli/locales/comments.yml:7: MyScope/NoComments with AllowedPatterns: /^NOTE: /
+            # This single line is not allowed.
+
+          spec/examples/cli/locales/en.yml:4 in en.causes_offence: match-segment /wef/
+            This has wef in it!
+                     ^^^
+
+          spec/examples/cli/locales/fr.yml:5: match-file /German/i
+              i_am_a_german_key: 'Was gehn der alter?'
+                     ^^^^^^
+
+          spec/examples/cli/locales/interpolations.yml:4 in fr.welcome: BuiltIn/Interpolations: broken
+            Bienvenue % {name}
+                      ^^^^^^^^
+
+          Comparison: BuiltIn/Interpolations
+          spec/examples/cli/locales/interpolations.yml:4 in fr.welcome
+            Bienvenue % {name}
+          spec/examples/cli/locales/interpolations.yml:2 in en.welcome: missing in fr: name
+            Welcome %{name}
+                    ^^^^^^^
+
+          Comparison: mismatch-to-source /\\[[A-Z_]+\\]/
+          spec/examples/cli/locales/raise_brackets_comparison.rb: in fr.brackets2: Found mismatches to the source EN
+            et ca c'est [VOTRE_TAG]
+                        ^^^^^^^^^^^
+            pour [YOUR_NAME]
+          spec/examples/cli/locales/raise_brackets_comparison.rb: in en.brackets2
+            and that is [YOUR_TAG]
+                        ^^^^^^^^^^
+            for [YOUR_NAME]
+
+          8 offences detected
+        OUT
     end
   end
 end

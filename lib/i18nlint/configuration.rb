@@ -66,7 +66,7 @@ module I18nLint
     def load_rule_options_from_file
       return {} if config_filepath.nil?
 
-      ::YAML.safe_load_file(config_filepath)
+      ::YAML.safe_load_file(config_filepath) || {}
     rescue ::Errno::ENOENT
       @config_file_does_not_exist = config_filepath
       {}
@@ -76,7 +76,9 @@ module I18nLint
 
     def register_built_ins
       Rule.rule_classes.select(&find_built_in).each do |klass|
-        @remaining_rule_options.delete(klass.rule_key)&.each do |conf|
+        config = @remaining_rule_options.delete(klass.rule_key) || {}
+        config = [config] unless config.is_a? Array
+        config.each do |conf|
           register_from_options(conf, klass)
         end
       end

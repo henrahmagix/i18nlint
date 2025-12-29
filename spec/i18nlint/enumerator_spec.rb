@@ -161,17 +161,15 @@ RSpec.describe I18nLint::Enumerator do
 
     it "works with all kinds of yaml, but doesn't offer line numbers for everything" do
       segments = nil
-      # Find filepaths separately so we can ignore the config file: it's hard to do with an fnmatch.
-      filepaths = Dir.glob(examples_dir.join("**/*.yml")).reject { _1.end_with?("/cli/config.yml") }
-      expect { segments = described_class.new(filepaths, source_locale: "FR").each_segment.to_a }
+      filepath = examples_dir.join("all_sorts_of_yaml_syntax.yml").to_s
+      expect { segments = described_class.new(filepath, source_locale: "FR").each_segment.to_a }
         .not_to raise_error
-      expect(segments.map(&:filepath)).to include examples_dir.join("all_sorts_of_yaml_syntax.yml").to_s
+      expect(segments.map(&:filepath).uniq).to eq [filepath]
 
       # This format looks a little funky because this library assumes that the whole document is a hash and every
       # top-level key is a locale. We're deliberately using different yaml in this test to ensure we don't raise errors,
       # and with that comes the absence of `#key` in most segments.
-      all_sorts = segments.select { _1.filepath == examples_dir.join("all_sorts_of_yaml_syntax.yml").to_s }
-                          .map { "#{_1.locale}.#{_1.key}:#{_1.lineno || "<NO LINE>"}" }
+      all_sorts = segments.map { "#{_1.locale}.#{_1.key}:#{_1.lineno || "<NO LINE>"}" }
       expect(all_sorts.join("\n")).to eq <<~KEYS.chomp
         stuff.lower:3
         stuff.UPPER:4

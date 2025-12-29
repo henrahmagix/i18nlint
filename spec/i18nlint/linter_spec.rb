@@ -13,14 +13,12 @@ RSpec.describe I18nLint::Linter do
                          raw: "fr:\n  hi: bonjour\n")
     ]
     allow(enum).to receive(:each_file) { |&b| files.each(&b) }
-    original_files = Marshal.dump(files)
 
     segments = [
       I18nLint::Segment.new(file: files[0], lineno: 2, key: "hi", text: "hello", locale: "en", source_locale: "en"),
       I18nLint::Segment.new(file: files[1], lineno: 2, key: "hi", text: "bonjour", locale: "fr", source_locale: "en")
     ]
     allow(enum).to receive(:each_segment) { |&b| segments.each(&b) }
-    original_segments = Marshal.dump(segments)
 
     rule_class = Class.new(I18nLint::Rule) do
       @has_run_file = false
@@ -61,6 +59,9 @@ RSpec.describe I18nLint::Linter do
     end
 
     allow(I18nLint::Registry).to receive(:rules).and_return [rule_class.new]
+
+    original_files = Marshal.dump(files)
+    original_segments = Marshal.dump(segments)
 
     linter = described_class.new(filepaths: "", source_locale: "en")
     linter.run
