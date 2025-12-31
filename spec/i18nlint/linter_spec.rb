@@ -58,7 +58,7 @@ RSpec.describe I18nLint::Linter do
       end
     end
 
-    allow(I18nLint::Registry).to receive(:rules).and_return [rule_class.new]
+    I18nLint::Registry.register_rule(rule_class)
 
     original_files = Marshal.dump(files)
     original_segments = Marshal.dump(segments)
@@ -92,24 +92,23 @@ RSpec.describe I18nLint::Linter do
     ]
     allow(enum).to receive(:each_segment) { |&b| segments.each(&b) }
 
-    rule_class = Class.new(I18nLint::Rule)
-    allow(I18nLint::Registry).to receive(:rules).and_return [rule_class.new]
+    rule = I18nLint::Registry.register_rule Class.new(I18nLint::Rule) { def on_file(*); end }
 
     linter = described_class.new(filepaths: "", source_locale: "en")
 
-    rule_class.define_method(:on_file) { |_file| raise "file problem" }
+    def rule.on_file(_file) = raise "file problem"
     expect { linter.run }.to raise_error(
       I18nLint::ErrorOnFile, "on file locales/en.yml:\n  RuntimeError: file problem"
     )
 
-    rule_class.define_method(:on_file) { |*| nil }
-    rule_class.define_method(:on_segment) { |_segment| raise "segment problem" }
+    def rule.on_file(*) = nil
+    def rule.on_segment(_segment) = raise "segment problem"
     expect { linter.run }.to raise_error(
       I18nLint::ErrorOnSegment, "on segment hi at locales/en.yml:2:\n  RuntimeError: segment problem"
     )
 
-    rule_class.define_method(:on_segment) { |*| nil }
-    rule_class.define_method(:on_segment_comparison) { |_segment, _source| raise "segment comparison problem" }
+    def rule.on_segment(*) = nil
+    def rule.on_segment_comparison(_segment, _source) = raise "segment comparison problem"
     expect { linter.run }.not_to raise_error
     expect { linter.run_comparison }.to raise_error(
       I18nLint::ErrorOnSegmentComparison, "on segment hi at locales/fr.yml:2 compared to hi at locales/en.yml:2:" \
