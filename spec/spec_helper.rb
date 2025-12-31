@@ -7,6 +7,9 @@ require "i18nlint/rspec/expect_offence"
 
 require_relative "support/reset_global_state"
 
+ORIG_STDOUT = $stdout # use this when debugging in tests that capture stdout/stderr
+ORIG_STDERR = $stderr
+
 RSpec.configure do |config|
   config.include I18nLint::RSpec::ExpectOffence
 
