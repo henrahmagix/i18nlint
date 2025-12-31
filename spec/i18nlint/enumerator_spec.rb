@@ -19,17 +19,27 @@ RSpec.describe I18nLint::Enumerator do
     end
   end
 
-  it "enumerates each file" do
+  def duration
+    start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    yield
+    Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+  end
+
+  it "enumerates each file, memoised so subsequent iterations are much faster" do
     instance = described_class.new(examples_dir.join("enumerator/*.yml"), source_locale: "en")
 
-    expect(instance.each_file.map(&:filepath))
-      .to match_array [
-        examples_dir.join("enumerator/flat_en.yml").to_s,
-        examples_dir.join("enumerator/flat_fr.yml").to_s,
-        examples_dir.join("enumerator/nested_en.yml").to_s,
-        examples_dir.join("enumerator/nested_fr.yml").to_s,
-        examples_dir.join("enumerator/multiple.yml").to_s
-      ]
+    first_duration = duration do
+      expect(instance.each_file.map(&:filepath))
+        .to match_array [
+          examples_dir.join("enumerator/flat_en.yml").to_s,
+          examples_dir.join("enumerator/flat_fr.yml").to_s,
+          examples_dir.join("enumerator/nested_en.yml").to_s,
+          examples_dir.join("enumerator/nested_fr.yml").to_s,
+          examples_dir.join("enumerator/multiple.yml").to_s
+        ]
+    end
+
+    expect(duration { instance.each_file.to_a }).to be < first_duration / 100
   end
 
   it "enumerates each segment for a file" do
