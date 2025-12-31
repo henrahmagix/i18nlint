@@ -10,44 +10,42 @@ module I18nLint
   class CLI
     def self.run(...) = new.run(...)
 
-    def config(args) # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
-      Configuration.new(args).tap do |conf|
-        conf.on_problems { |e| warn e.message }
+    def run(args = []) # rubocop:disable Metrics/AbcSize,Metrics/MethodLength,Metrics/CyclomaticComplexity
+      conf = Configuration.new(args)
+      conf.on_problems { |e| warn e.message }
 
-        conf.load_from_argv_and_file!
+      conf.load_from_argv_and_file!
 
-        if conf.source_locale.to_s.empty?
-          warn conf.help
-          exit 1
-        end
-
-        if conf.config_file_does_not_exist
-          warn "Config file does not exist: #{conf.config_file_does_not_exist}"
-          warn conf.help
-          exit 1
-        end
-
-        conf.register_rules!
-        conf.remaining_rule_options.each_key do |key|
-          warn "Unused configuration #{key.inspect} expects class #{key.gsub("/", "::")} to subclass I18nLint::Rule. " \
-               "If this is a rule you're expecting to be used, that means it hasn't been loaded in the `require:` " \
-               "list, or it doesn't subclass I18nLint::Rule."
-          warn
-        end
+      if conf.source_locale.to_s.empty?
+        warn Configuration.help
+        exit 1
       end
-    end
 
-    def run(args = []) # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
-      conf = config(args)
+      if conf.config_file_does_not_exist
+        warn "Config file does not exist: #{conf.config_file_does_not_exist}"
+        warn Configuration.help
+        exit 1
+      end
+
+      conf.register_rules!
+      conf.remaining_rule_options.each_key do |key|
+        warn "Unused configuration #{key.inspect} expects class #{key.gsub("/", "::")} to subclass I18nLint::Rule. " \
+             "If this is a rule you're expecting to be used, that means it hasn't been loaded in the `require:` " \
+             "list, or it doesn't subclass I18nLint::Rule."
+        warn
+      end
+
       linter = Linter.new(filepaths: conf.filepaths, source_locale: conf.source_locale)
 
       if linter.num_files.zero?
-        puts "No files given"
+        warn "No files given"
+        warn Configuration.help
         exit 0
       end
 
       if Registry.rules.empty?
-        puts "No rules configured"
+        warn "No rules configured"
+        warn Configuration.help
         exit 0
       end
 

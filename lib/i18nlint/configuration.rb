@@ -11,9 +11,15 @@ module I18nLint
     end
 
     def load_from_argv_and_file!
-      parse_argv
-      @filepaths = @args # remaining after being parsed
+      opts = {}
+      self.class.parser.parse!(@args, into: opts)
+
+      @source_locale = opts[:source]&.upcase
+      @config_filepath = opts[:config]
+
+      @filepaths = @args # remaining after being mutated by `parser.parse!`
       @rule_options.merge!(load_rule_options_from_file)
+
       @remaining_rule_options = rule_options.dup
       @requires += @remaining_rule_options.delete("require") || []
     end
@@ -22,7 +28,7 @@ module I18nLint
       @on_problems = block
     end
 
-    def help = @parser.help
+    def self.help = parser.help
 
     attr_reader :filepaths, :source_locale, :requires, :rule_options,
                 :config_file_does_not_exist, :remaining_rule_options
@@ -39,22 +45,16 @@ module I18nLint
       problems.each { @on_problems.call(_1) } if @on_problems
     end
 
-    private
-
-    def parse_argv
-      @parser = OptionParser.new do |parser|
+    def self.parser
+      @parser ||= OptionParser.new do |parser|
         parser.banner = "Usage: i18nlint files... --source=LOCALE --config=path/to/.i18nlint.yml"
 
-        parser.on("--source=LOCALE", "The locale to configure segment comparisons against source.") do |v|
-          @source_locale = v.upcase
-        end
-        parser.on("--config=CONFIG", "The configuration of rules.") do |v|
-          @config_filepath = v
-        end
-
-        parser.parse!(@args)
+        parser.on("--source=LOCALE", "The locale to configure segment comparisons against source.")
+        parser.on("--config=CONFIG", "The configuration of rules.")
       end
     end
+
+    private
 
     def config_filepath
       @config_filepath ||= [

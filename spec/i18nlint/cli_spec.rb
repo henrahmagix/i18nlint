@@ -9,18 +9,14 @@ RSpec.describe I18nLint::CLI do
     raise "Exited non-zero. You should assert `system_exit(n)` so you can assert on the output without RSpec quitting."
   end
 
-  def match_on_one_line(*parts)
-    include(/#{parts.map { Regexp.escape(_1) }.join(".*")}/)
-  end
-
   def system_exit(expected_status)
     raise_error(SystemExit) { |e| expect(e.status).to be(expected_status) }
   end
 
   def print_help(with: nil)
-    match = include("Usage: i18nlint files...")
-    match = match.and(include(with)) if with
-    output(match).to_stderr
+    expected = I18nLint::Configuration.help
+    expected = "#{with}\n#{expected}" if with
+    output(expected).to_stderr
   end
 
   it "fails without a --source" do
@@ -38,7 +34,7 @@ RSpec.describe I18nLint::CLI do
   it "exits 0 when no files are given" do
     expect { described_class.run(["--source", "FR"]) }
       .to system_exit(0)
-      .and output("No files given\n").to_stdout
+      .and print_help(with: "No files given")
   end
 
   it "exits 0 when no rules are defined" do
@@ -46,8 +42,7 @@ RSpec.describe I18nLint::CLI do
     allow(I18nLint::Registry).to receive(:rules).and_return []
     expect { described_class.run(["--source=fr", "spec/examples/**/*.yml"]) }
       .to system_exit(0)
-      .and output("No rules configured\n").to_stdout
-      .and output(anything).to_stderr # suppress
+      .and print_help(with: "No rules configured")
   end
 
   context "without any offending I18n" do
@@ -96,7 +91,7 @@ RSpec.describe I18nLint::CLI do
     end
   end
 
-  context "with offending I18n" do
+  context "with offending I18n and a large config using all builtins" do
     let(:args) { ["--source", "en", "--config=spec/examples/cli/config.yml", "spec/examples/cli/locales/*"] }
 
     it "warns about unused rules and configuration errors, prints the offences, and exits 0" do
