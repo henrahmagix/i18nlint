@@ -5,63 +5,43 @@ RSpec.describe I18nLint do
     expect(I18nLint::VERSION).not_to be nil
   end
 
-  it "allows registering rules" do
-    test_rule_class = Class.new(I18nLint::Rule) do
-      def on_segment(*); end
-    end
-    expect(I18nLint.register_rule(test_rule_class)).to be_a(test_rule_class)
+  it "passes through to the Linter" do
+    filepaths = ["one.yml", "two.rb"]
+    source_locale = "pl"
+
+    offences = ["mock", "the real values will not be strings, but this test is a unit test, so we're mocking simply"]
+
+    linter = instance_double(I18nLint::Linter)
+    expect(I18nLint::Linter).to receive(:new).with(filepaths:, source_locale:).and_return(linter)
+    expect(linter).to receive_messages(
+      run: nil,
+      run_comparison: nil,
+      offences:
+    )
+
+    expect(described_class.lint(filepaths, source_locale:)).to be(offences)
   end
 
-  context "with a class rule with a description" do
-    let(:klass) do
-      Class.new(I18nLint::Rule) do
-        def self.description = "Each file should only have 1 top-level locale key."
+  it "finds offences for a registered rule" do
+    stub_const("::Test::OnlyOneTopLevelKey", Class.new(I18nLint::Rule) do
+      def self.description = "Each file should only have 1 top-level locale key."
 
-        def self.name = "Test::Description"
+      def on_file(i18n_file)
+        top_level_keys = i18n_file.parsed.keys
+        return if top_level_keys.size < 2
 
-        def on_file(i18n_file)
-          top_level_keys = i18n_file.parsed.keys
-          return if top_level_keys.size < 2
-
-          add_offence(i18n_file)
-        end
+        add_offence(i18n_file, "too many top-level keys: #{top_level_keys.join(", ")}")
       end
-    end
+    end)
 
-    before { I18nLint.register_rule(klass) }
+    I18nLint.register_rule(Test::OnlyOneTopLevelKey)
 
-    it "finds offences for the rule" do
-      examples = Pathname.new(File.expand_path("examples/", __dir__))
-      expect(I18nLint.lint(examples.join("class/*.yml"), source_locale: "fr")).to eq [
-        I18nLint::FileOffence.new(rule: "Test/Description Each file should only have 1 top-level locale key.",
-                                  filepath: examples.join("class/bad.yml").to_s, message: nil)
-      ]
-    end
-  end
+    good = temp_file "good.yml", "en: {}"
+    bad = temp_file "bad.yml", "fr: {}\nen: {}"
 
-  context "with a class rule that adds a custom message" do
-    let(:klass) do
-      Class.new(I18nLint::Rule) do
-        def self.name = "Test::Message"
-
-        def on_file(i18n_file)
-          top_level_keys = i18n_file.parsed.keys
-          return if top_level_keys.size < 2
-
-          # Previous I18n versions don't symbolize the keys when parsing, so we normalise them for this test.
-          add_offence(i18n_file, "too many top-level keys: must be < 2, but is #{top_level_keys.map(&:to_sym)}")
-        end
-      end
-    end
-
-    before { I18nLint.register_rule(klass) }
-
-    it "finds offences for the rule" do
-      examples = Pathname.new(File.expand_path("examples/", __dir__))
-      expect(I18nLint.lint(examples.join("class/*.yml"), source_locale: "fr")).to eq [
-        I18nLint::FileOffence.new(rule: "Test/Message", filepath: examples.join("class/bad.yml").to_s,
-                                  message: "too many top-level keys: must be < 2, but is [:fr, :en]")
-      ]
-    end
+    expect(I18nLint.lint([good, bad], source_locale: "fr")).to eq [
+      I18nLint::FileOffence.new(rule: "Test/OnlyOneTopLevelKey Each file should only have 1 top-level locale key.",
+                                filepath: bad.to_s, message: "too many top-level keys: fr, en")
+    ]
   end
 end

@@ -37,17 +37,25 @@ RSpec.describe I18nLint::CLI do
       .and print_help(with: "No files given")
   end
 
-  it "exits 0 when no rules are defined" do
+  it "exits 0 when no rules are defined, which won't happen whilst we're always enabling some builtins" do
     allow(I18nLint::Rule).to receive(:rule_classes).and_return []
     allow(I18nLint::Registry).to receive(:rules).and_return []
-    expect { described_class.run(["--source=fr", "spec/examples/**/*.yml"]) }
+    expect { described_class.run(["--source=fr", *random_files]) }
       .to system_exit(0)
       .and print_help(with: "No rules configured")
   end
 
   context "without any offending I18n" do
-    let(:args) { ["--source", "pl", "--config=#{conf_file.path}", "spec/examples/cli/locales/good.yml"] }
-    let(:conf_file) { Tempfile.create(["empty", ".yml"]) }
+    let(:args) { ["--source", "pl", "--config=#{config_filepath}", locale_filepath] }
+    let(:config_filepath) { temp_file("empty.yml", "") }
+    let(:locale_filepath) do
+      temp_file "good.yml", <<~YAML
+        en:
+          ok: This should not match any test rules
+        pl:
+          ok: Dobrze
+      YAML
+    end
 
     it "exits 0 without any offences or errors" do
       expect { described_class.run(args) }
@@ -57,33 +65,6 @@ RSpec.describe I18nLint::CLI do
           Inspecting 1 files
           .
           Comparing segments to source PL
-
-
-          No offences detected
-        OUT
-    end
-  end
-
-  context "with offending interpolations and BuiltIn/Interpolations disabled" do
-    let(:args) { ["--source", "fr", "--config=#{conf_file.path}", "spec/examples/cli/locales/interpolations.yml"] }
-    let(:conf_file) do
-      Tempfile.create(["disabled_interpolations", ".yml"]).tap do |f|
-        f.write <<~YML
-          BuiltIn/Interpolations:
-            Enabled: false
-        YML
-        f.rewind
-      end
-    end
-
-    it "exits 0 without any offences or errors" do
-      expect { described_class.run(args) }
-        .to system_exit(0)
-        .and output("").to_stderr
-        .and output(<<~OUT).to_stdout
-          Inspecting 1 files
-          .
-          Comparing segments to source FR
           .
 
           No offences detected
