@@ -3,8 +3,6 @@
 require_relative "cloneable_struct"
 require_relative "yaml_with_lines"
 
-require "i18n"
-
 module I18nLint
   File = CloneableStruct.new(:filepath, :parsed, :raw, keyword_init: true) do
     def initialize(...)
@@ -28,24 +26,17 @@ module I18nLint
     end
   end
 
-  # Using an I18n backend to load and parse the files ensures consistency in syntactical restrictions.
-  class Backend < ::I18n::Backend::Simple
-    # We're overloading so we can capture line numbers when parsing YAML.
-    def suppress_warnings
-      verbosity = $VERBOSE
-      $VERBOSE = nil
-      yield
-    ensure
-      $VERBOSE = verbosity
-    end
+  # Using an I18n backend to load and parse the files ensures consistency in syntactical restrictions. We're overloading
+  # so we can capture line numbers where possible.
+  class Loader < ::I18n::Backend::Simple
+    # We don't need to store the translations.
+    def store_translations(...); end
 
-    ORIG_YAML = Object.const_get(:YAML)
-
-    def load_file(filepath)
-      suppress_warnings { Object.const_set(:YAML, YamlWithLines) }
+    def load_yml(...)
+      ::I18n::Backend.const_set(:YAML, YamlWithLines)
       super
     ensure
-      suppress_warnings { Object.const_set(:YAML, ORIG_YAML) }
+      ::I18n::Backend.send(:remove_const, :YAML)
     end
   end
 
@@ -57,48 +48,51 @@ module I18nLint
       @filepaths = Dir[*Array(filepaths).map(&:to_s)]
       @source_locale = source_locale
 
-      @i18n_backend = Backend.new
+      @i18n_loader = Loader.new
 
-      @parsed_files_by_filepath = {}
+      @files = {}
     end
 
     def num_files
       @filepaths.size
     end
 
-    def each_file(&)
-      ::Enumerator.new do |yielder|
-        @filepaths.each do |filepath|
-          yielder << @parsed_files_by_filepath[filepath] ||= File.new(
-            filepath:,
-            parsed: @i18n_backend.load_file(filepath),
-            raw: ::File.read(filepath)
-          )
-        end
-      end.each(&)
+    def each_file
+      return to_enum(__method__) { @filepaths.size } unless block_given?
+
+      @filepaths.each do |filepath|
+        yield @files[filepath] ||= File.new(
+          filepath:,
+          parsed: @i18n_loader.send(:load_file, filepath),
+          raw: ::File.read(filepath)
+        )
+      end
     end
 
-    def each_segment(file: nil, &block)
-      ::Enumerator.new do |yielder|
-        each_file do |i18n_file|
-          next if file && i18n_file != file
+    def each_segment(file: nil)
+      return to_enum(__method__, file:) unless block_given?
 
-          YamlWithLines.walk(i18n_file.parsed, yield_hash_when:) do |(locale, *key_parts), text, line_start, _line_end|
-            text, value = determine_text_and_value(text)
-            yielder << Segment.new(file: i18n_file, lineno: line_start, key: key_parts.join("."), text:, value:,
-                                   locale:, source_locale:)
-          end
+      each_file do |i18n_file|
+        next if file && i18n_file != file
+
+        YamlWithLines.walk(i18n_file.parsed, yield_hash_when:) do |(locale, *key_parts), text, line_start, _line_end|
+          text, value = determine_text_and_value(text)
+          yield Segment.new(file: i18n_file, lineno: line_start, key: key_parts.join("."), text:, value:,
+                            locale:, source_locale:)
         end
-      end.each(&block)
+      end
     end
 
     private
 
     def yield_hash_when
       proc do |hash|
-        keys = hash.keys.map(&:to_s)
-        keys.include?("one") && (keys.include?("few") || keys.include?("many") || keys.include?("other"))
+        hash_key?(hash, :one) && (hash_key?(hash, :few) || hash_key?(hash, :many) || hash_key?(hash, :other))
       end
+    end
+
+    def hash_key?(hash, key)
+      hash.key?(key.to_s) || hash.key?(key.to_sym)
     end
 
     def determine_text_and_value(text)

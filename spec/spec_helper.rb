@@ -11,6 +11,12 @@ require_relative "support/example_files"
 ORIG_STDOUT = $stdout # use this when debugging in tests that capture stdout/stderr
 ORIG_STDERR = $stderr
 
+at_exit { puts <<~MSG }
+  VERSIONS:
+    i18n #{I18n::VERSION}
+    psych #{Psych::VERSION}
+MSG
+
 RSpec.configure do |config|
   config.include I18nLint::RSpec::ExpectOffence
 

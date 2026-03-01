@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "i18n"
+
 require_relative "i18nlint/version"
 require_relative "i18nlint/error"
 require_relative "i18nlint/configuration"

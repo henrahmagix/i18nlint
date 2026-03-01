@@ -37,7 +37,7 @@ GEM
       prettyprint
     prettyprint (0.2.0)
     prism (1.5.1)
-    psych (5.2.6)
+    psych (5.3.1)
       date
       stringio
     racc (1.8.1)
@@ -101,6 +101,7 @@ DEPENDENCIES
   i18n (= 1.14.7)
   i18nlint!
   irb
+  psych (= 5.3.1)
   rake (~> 13.0)
   rspec (~> 3.0)
   rubocop (~> 1.21)

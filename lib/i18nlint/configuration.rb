@@ -66,10 +66,23 @@ module I18nLint
     def load_rule_options_from_file
       return {} if config_filepath.nil?
 
-      ::YAML.safe_load_file(config_filepath) || {}
+      ::File.open(config_filepath, "r:bom|utf-8") do |f|
+        load_yaml(f, config_filepath) || {}
+      end
     rescue ::Errno::ENOENT
       @config_file_does_not_exist = config_filepath
       {}
+    end
+
+    if Gem.loaded_specs["psych"].version < Gem::Version.create("3.1.0")
+      def load_yaml(stream, filepath)
+        # Args: whitelist_classes = [], whitelist_symbols = [], aliases = false, filename = nil
+        ::YAML.safe_load(stream.read, [], [], false, filepath)
+      end
+    else
+      def load_yaml(stream, filepath)
+        ::YAML.safe_load(stream.read, filename: filepath)
+      end
     end
 
     def find_built_in = proc { _1.name&.start_with?(Rules::BuiltIn.name) }

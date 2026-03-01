@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "pp"
+
 module ExampleFiles
   DIR = Pathname.new File.expand_path("../example", __dir__)
 
@@ -36,11 +38,15 @@ module ExampleFiles
   end
 
   def random_yaml_files(num = nil, locales_per: nil, segments_per: nil)
-    _random_files "file_%d.yml", num, locales_per, segments_per
+    _random_files "file_%d.yml", num, locales_per, segments_per, &:to_yaml
+  end
+
+  def random_json_files(num = nil, locales_per: nil, segments_per: nil)
+    _random_files "file_%d.json", num, locales_per, segments_per, &:to_json
   end
 
   def random_ruby_files(num = nil, locales_per: nil, segments_per: nil)
-    _random_files "file_%d.rb", num, locales_per, segments_per
+    _random_files "file_%d.rb", num, locales_per, segments_per, &:pretty_inspect
   end
 
   private
@@ -49,7 +55,8 @@ module ExampleFiles
     n_to_avoid_overwriting = ExampleFiles.instance_variable_set :@n, ExampleFiles.instance_variable_get(:@n) + 1
     name = suffix_filename(name, n_to_avoid_overwriting)
     (num_files ? num_files.times : rand_times(20)).map do |n|
-      temp_file name % n, rand_hash(locales_per || 1, segments_per || rand_n1(50)).to_json
+      content = yield rand_hash(locales_per || 1, segments_per || rand_n1(50))
+      temp_file name % n, content
     end
   end
 

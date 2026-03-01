@@ -9,5 +9,6 @@ gem "rubocop", "~> 1.21"
 gem "simplecov", "~> 0.22.0"
 gem "simplecov-lcov", "~> 0.9.0"
 gem "i18n", "1.2.0"
+gem "psych", "3.0.3"
 
 gemspec path: "../"

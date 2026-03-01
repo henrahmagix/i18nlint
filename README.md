@@ -1,6 +1,6 @@
 # I18nLint
 
-I18nLint your i18n for common problems, so you can be sure your copy doesn't get broken.
+Lint your i18n for common problems, so you can be sure your copy doesn't get broken.
 
 ## Installation
 
@@ -22,12 +22,14 @@ gem install i18nlint i18nlint-0.1.0.gem
 ## Usage
 
 ### Rails
-This task depends on the Rails task `:environment`, so your application will be loaded, including your I18n configuration, to detect your `I18n.default_locale`.
 
-If there's a `.i18nlint.yml` config file in the root folder, it'll get loaded automatically.
 ```bash
 bin/rails i18nlint
 ```
+
+This task depends on the Rails task `:environment`, so your application will be loaded, including your I18n configuration, to detect your `I18n.default_locale`.
+
+If there's a `.i18nlint.yml` config file in the root folder, it'll get loaded automatically.
 
 ### CLI
 As a command-line tool with arguments:
@@ -36,25 +38,16 @@ i18nlint --source=en --config=lint.yml config/locales/*.yml
 ```
 
 ### Ruby
+As a Ruby script:
 ```rb
 require "i18nlint"
 
 class MyRule < I18nLint::Rule
-  def on_segment(segment)
-    if (match = segment.text.match /some kind of match/)
-      add_segment_offence(segment, "this is my custom message", highlight: match.offset(0))
-    end
-  end
-  def on_file(file)
-    # add_file_offence(file)
-  end
-  def on_segment_comparison(segment, source_segment)
-    # add_segment_compare_offence(segment, source_segment, highlight: [], source_highlight: [])
-  end
+  # Define at least one method of :on_file, :on_segment, or :on_segment_comparison.
 end
 I18nLint.register_rule(MyRule)
 
-offences = I18nLint.lint("config/locales/*.yml", source_locale: "en") # array of offences
+offences = I18nLint.lint("path/to/locales/*.{yml,rb,json}", source_locale: "en") # array of offences
 
 # Each offence has the `rule` that added it, the `filepath`, `lineno`, and `text` of the segment or file, and an optional `message` string.
 # Segment offences also have `locale` and their full `key`.
@@ -68,7 +61,7 @@ offences.each do |o|
 end
 ```
 
-### Configuration
+## Configuration
 
 A YAML file named `.i18nlint.yml` is looked for automatically in the current directory and your home directory.
 

@@ -1,29 +1,33 @@
 # frozen_string_literal: true
 
-# TODO: get line numbers for sequences, e.g.
-# abbr_month_names: [~, Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec]
-
 module I18nLint
   # Parse YAML such that every value is a ValueWithLineNumbers.
   class YamlWithLines
     ValueWithLineNumbers = Struct.new(:value, :lines)
 
     class << self
+      # I18n, up to 1.14 as of writing, always unsafe-loads YAML because it should be from devs, not user-supplied. This
+      # is why we don't bother defining `safe_load` methods here. If any NoMethodError exceptions are being raised for a
+      # `safe_load*` method being called, please look into the version of I18n to see if it's changed, or if our
+      # patching-in of this class has a bug and is effecting other YAML-loading classes.
+
       def unsafe_load(yaml, filename: nil, fallback: false, symbolize_names: false, freeze: false, # rubocop:disable Metrics/ParameterLists
-                      strict_integer: false)
+                      strict_integer: false, parse_symbols: true)
         result = parse(yaml, filename:)
         return fallback unless result
 
-        Psych::Visitors::ToRubyWithLineNumbers.create(symbolize_names:, freeze:, strict_integer:).accept(result)[0]
+        Psych::Visitors::ToRubyWithLineNumbers.create(symbolize_names:, freeze:, strict_integer:, parse_symbols:)
+                                              .accept(result)[0]
       end
 
-      def unsafe_load_file filename, **kwargs
+      # copy-paste from Psych.
+      def unsafe_load_file(filename, **kwargs)
         ::File.open(filename, "r:bom|utf-8") do |f|
           unsafe_load f, filename: filename, **kwargs
         end
       end
 
-      alias load_file unsafe_load_file
+      alias load_file unsafe_load_file # I18n relies on unsafe-loading, and < 1.8 relies on Psych defaulting to unsafe.
 
       def parse(yaml, filename: nil)
         handler = Psych::TreeWithLineNumbersBuilder.new
@@ -60,6 +64,7 @@ module I18nLint
 end
 
 # Copied from https://gist.github.com/johncarney/7332f7b2075b86ea52177a4a82453806
+# I've edited it to apply line numbers to sequence values too, even though they're unlikely to be used in i18n.
 =begin # rubocop:disable Style/BlockComments
 Custom Psych parser that captures line number information from a YAML file.
 
@@ -126,6 +131,20 @@ class Psych::Visitors::ToRubyWithLineNumbers < Psych::Visitors::ToRuby # rubocop
     visit_Psych_Nodes_Sequence(node)
   end
 
+  if Gem.loaded_specs["psych"].version < Gem::Version.create("3.2.0")
+    def self.create(...)
+      super()
+    end
+  elsif Gem.loaded_specs["psych"].version < Gem::Version.create("5.0.0")
+    def self.create(*args, strict_integer:, parse_symbols:, **kwargs) # rubocop:disable Lint/UnusedMethodArgument
+      super(*args, **kwargs)
+    end
+  elsif Gem.loaded_specs["psych"].version < Gem::Version.create("5.3.0")
+    def self.create(*args, parse_symbols:, **kwargs) # rubocop:disable Lint/UnusedMethodArgument
+      super(*args, **kwargs)
+    end
+  end
+
   private
 
   def revive_hash(hash, node, tagged = false) # rubocop:disable Metrics/CyclomaticComplexity,Metrics/PerceivedComplexity,Metrics/AbcSize,Metrics/MethodLength,Style/OptionalBooleanParameter
@@ -169,7 +188,7 @@ class Psych::Visitors::ToRubyWithLineNumbers < Psych::Visitors::ToRuby # rubocop
       else
         if !tagged && @symbolize_names && key.is_a?(String)
           key = key.to_sym
-        elsif !@freeze
+        elsif !@freeze && respond_to?(:deduplicate)
           key = deduplicate(key)
         end
 

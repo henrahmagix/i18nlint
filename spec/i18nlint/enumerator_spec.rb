@@ -3,9 +3,9 @@
 RSpec.describe I18nLint::Enumerator do
   describe "File" do
     it "says what kind of source the file is" do
-      expect(I18nLint::File.new(filepath: "a.rb")).to have_attributes(ruby?: true, yaml?: false, json?: false)
-      expect(I18nLint::File.new(filepath: "b.yml")).to have_attributes(ruby?: false, yaml?: true, json?: false)
-      expect(I18nLint::File.new(filepath: "c.yaml")).to have_attributes(ruby?: false, yaml?: true, json?: false)
+      expect(I18nLint::File.new(filepath: "a.rb")).to   have_attributes(ruby?: true,  yaml?: false, json?: false)
+      expect(I18nLint::File.new(filepath: "b.yml")).to  have_attributes(ruby?: false, yaml?: true,  json?: false)
+      expect(I18nLint::File.new(filepath: "c.yaml")).to have_attributes(ruby?: false, yaml?: true,  json?: false)
       expect(I18nLint::File.new(filepath: "d.json")).to have_attributes(ruby?: false, yaml?: false, json?: true)
     end
   end
@@ -17,7 +17,7 @@ RSpec.describe I18nLint::Enumerator do
     end
   end
 
-  it "enumerates each segment across multiple files, and compares against the source locale" do
+  it "enumerates each segment across multiple files" do
     temp_file "flat_en.yml",   "en:\n  one: one"
     temp_file "flat_fr.yml",   "fr:\n  one: un"
     temp_file "nested_en.yml", "en:\n  nested:\n    one: one"
@@ -92,6 +92,9 @@ RSpec.describe I18nLint::Enumerator do
     segments.each do |segment|
       segment.locale = segment.locale.to_sym
       segment.value.transform_keys!(&:to_sym)
+    rescue FrozenError
+      # If the values are frozen, then they're also symboliszed. This is known to be true up to I18n 1.14.
+      nil
     end
 
     expect(segments).to contain_exactly(
@@ -158,18 +161,6 @@ RSpec.describe I18nLint::Enumerator do
       calls
     end
 
-    it "only reads what's needed" do
-      calls = capture_method_calls(File, :read)
-      instance = nil
-
-      expect { instance = described_class.new(random_files(3), source_locale: nil) }
-        .not_to change(calls, :size)
-      expect { instance.each_file.take(2) }
-        .to change(calls, :size).from(0).to(2)
-      expect { instance.each_file.take(3) }
-        .to change(calls, :size).from(2).to(3)
-    end
-
     def capture_i18n_loads
       yaml = capture_method_calls(I18nLint::YamlWithLines, :parse)
       ruby = capture_method_calls(IO, :read) do |locs|
@@ -191,24 +182,51 @@ RSpec.describe I18nLint::Enumerator do
 
     it "only parses what's needed when enumerating files" do
       calls = capture_i18n_loads
-      instance = described_class.new(random_files(5), source_locale: nil)
+
+      instance = nil
+      expect { instance = described_class.new(random_files(5), source_locale: nil) } # shouldn't pass on allocation
+        .not_to change(calls, :size).from(0)
+      expect { instance.each_file } # shouldn't parse anything when not given a block or iterating
+        .not_to change(calls, :size).from(0)
+
+      expect(instance.each_file).to be_a Enumerable
 
       expect { instance.each_file.take(2) }
         .to change(calls, :size).from(0).to(2) # only the yielded files should be parsed
+
+      expect { instance.each_file.take(1) }
+        .not_to change(calls, :size).from(2)
+
+      expect { instance.each_file.take(3) }
+        .to change(calls, :size).from(2).to(3)
+
+      expect { instance.each_file.take(2) }
+        .not_to change(calls, :size).from(3)
+
       expect { instance.each_file.to_a }
-        .to change(calls, :size).from(2).to(5) # rest of the files should be parsed
+        .to change(calls, :size).from(3).to(5) # rest of the files should be parsed
     end
 
     it "only parses what's needed when enumerating segments" do
       calls = capture_i18n_loads
-      instance = described_class.new(random_files(3, segments_per: 2), source_locale: nil)
+
+      instance = nil
+      expect { instance = described_class.new(random_files(3, segments_per: 2), source_locale: nil) }
+        .not_to change(calls, :size).from(0) # shouldn't pass on allocation
+      expect { instance.each_segment } # shouldn't parse anything when not given a block or iterating
+        .not_to change(calls, :size).from(0)
+
+      expect(instance.each_segment).to be_a Enumerable
 
       expect { instance.each_segment.take(1) }
         .to change(calls, :size).from(0).to(1) # only one file should be parsed for one segment
+
       expect { instance.each_segment.take(2) }
         .not_to change(calls, :size).from(1) # still the same first file being parsed cos it has 2 segments
+
       expect { instance.each_segment.take(4) }
         .to change(calls, :size).from(1).to(2) # parses the next file that has 2 segments
+
       expect { instance.each_segment.to_a }
         .to change(calls, :size).from(2).to(3) # parses all the files
     end
@@ -228,7 +246,7 @@ RSpec.describe I18nLint::Enumerator do
       expect(second_duration).to be < first_duration / 50
     end
 
-    it "works with all kinds of yaml, but doesn't offer line numbers for everything" do
+    it "works with all kinds of I18n yaml, and offers line numbers for everything" do
       filepath = temp_file "all_sorts_of_yaml_syntax.yml", <<~YAML
         # this is a comment
         stuff:
