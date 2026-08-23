@@ -34,6 +34,7 @@ module I18nLint
       require_relative "i18nlint/rules/built_in/match"
       # Other built-ins aren't much configurable so they're always registered.
       require_relative "i18nlint/rules/built_in/interpolations"
+      require_relative "i18nlint/rules/built_in/duplicates"
     end
   end
 end

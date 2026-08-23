@@ -1,0 +1,10 @@
+en:
+  a:
+    b:
+      c: "first"
+      first: "yes"
+  d: "last"
+  a:
+    b:
+      c: "second"
+      second: "yes"

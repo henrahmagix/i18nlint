@@ -6,6 +6,8 @@ module I18nLint
     ValueWithLineNumbers = Struct.new(:value, :lines)
 
     class << self
+      def dupe_segments_by_file = @dupe_segments_by_file ||= Hash.new { |h, k| h[k] = {} }
+
       # I18n, up to 1.14 as of writing, always unsafe-loads YAML because it should be from devs, not user-supplied. This
       # is why we don't bother defining `safe_load` methods here. If any NoMethodError exceptions are being raised for a
       # `safe_load*` method being called, please look into the version of I18n to see if it's changed, or if our
@@ -33,6 +35,7 @@ module I18nLint
         handler = Psych::TreeWithLineNumbersBuilder.new
         handler.parser = Psych::Parser.new(handler)
         handler.parser.parse(yaml, filename:)
+        dupe_segments_by_file[filename] = handler.duplicate_segments
         handler.root
       end
 
@@ -103,10 +106,65 @@ end
 class Psych::TreeWithLineNumbersBuilder < Psych::TreeBuilder # rubocop:disable Style/Documentation,Style/ClassAndModuleChildren
   attr_accessor :parser
 
+  # Track duplicate segments across the same file.
+  class DuplicatesTracker
+    def initialize
+      @levels = []
+      @keys = []
+      @level = -1
+    end
+
+    def duplicate_segments
+      @keys.group_by(&:first)
+           .reject { |_key, key_positions| key_positions.size < 2 }
+           .transform_values { |key_positions| key_positions.map(&:last) }
+    end
+
+    def start_map!
+      @level += 1
+      @_last_was_scalar = false
+    end
+
+    def end_map!
+      @level -= 1
+      @_last_was_scalar = false
+      @levels.pop
+    end
+
+    def add_scalar!(val, lineno)
+      if @_last_was_scalar
+        @_last_was_scalar = false
+        @keys << [@levels.join("."), lineno]
+        return
+      end
+
+      @_last_was_scalar = true
+      @levels[@level] = val
+    end
+  end
+
+  def initialize(...)
+    super
+    @_dup_tracker = DuplicatesTracker.new
+  end
+
+  def duplicate_segments = @_dup_tracker.duplicate_segments
+
   def scalar(*args)
+    @_dup_tracker.add_scalar!(args[0], parser.mark.line + 1)
     node = Psych::Nodes::ScalarWithLineNumber.new(*args, parser.mark.line)
     @last.children << node
     node
+  end
+
+  def start_mapping(...)
+    @_dup_tracker.start_map!
+    super
+  end
+
+  def end_mapping(...)
+    @_dup_tracker.end_map!
+    super
   end
 
   def start_sequence(*args)
@@ -152,15 +210,10 @@ class Psych::Visitors::ToRubyWithLineNumbers < Psych::Visitors::ToRuby # rubocop
       key = accept(k)
       val = accept(v)
 
-      if v.is_a? Psych::Nodes::ScalarWithLineNumber
+      if v.is_a?(Psych::Nodes::ScalarWithLineNumber) || v.is_a?(Psych::Nodes::SequenceWithLineNumber)
         start_line = end_line = v.line_number + 1
 
-        start_line = k.line_number + 1 if k.is_a? Psych::Nodes::ScalarWithLineNumber
-        val = I18nLint::YamlWithLines::ValueWithLineNumbers.new(val, start_line..end_line)
-      elsif v.is_a? Psych::Nodes::SequenceWithLineNumber
-        start_line = end_line = v.line_number + 1
-
-        start_line = k.line_number + 1 if k.is_a? Psych::Nodes::SequenceWithLineNumber
+        start_line = k.line_number + 1 if k.is_a?(v.class)
         val = I18nLint::YamlWithLines::ValueWithLineNumbers.new(val, start_line..end_line)
       end
 
