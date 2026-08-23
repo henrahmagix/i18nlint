@@ -2,15 +2,12 @@
 
 RSpec.describe I18nLint::RSpec::ExpectOffence do
   def no_colour!
-    @orig_color_mode ||= RSpec.configuration.color_mode
-    RSpec.configuration.color_mode = :off
+    allow(RSpec.configuration).to receive(:color_enabled?).and_return(false)
   end
 
   def allow_colour!
-    RSpec.configuration.color_mode = @orig_color_mode
+    allow(RSpec.configuration).to receive(:color_enabled?).and_return(true)
   end
-  before { @orig_color_mode = nil }
-  after { allow_colour! }
 
   def fail_with(expected)
     no_colour!
