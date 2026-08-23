@@ -80,6 +80,29 @@ module I18nLint
           .type(:segment).did_you_mean(:expect_comparison_offence)
       end
 
+      def on_file(filepath, contents)
+        rule.on_file(make_file(filepath, contents))
+        offences = rule.take_offences
+        [highlight_offences(contents, offences), offences]
+      end
+
+      def on_segment(source, lineno: nil, locale: nil, key: nil, filepath: nil)
+        rule.on_segment(make_segment(source, lineno:, locale:, key:, filepath:))
+        offences = rule.take_offences
+        [highlight_offences(source, offences), offences]
+      end
+
+      def on_comparison(translation, source, locale: nil, source_locale: nil)
+        rule.on_segment_comparison make_segment(translation, locale:), make_segment(source, locale: source_locale)
+        offences = rule.take_offences
+        [
+          compare_combine(
+            highlight_offences(translation, offences),
+            highlight_offences(source, offences.map(&:source_offence))
+          ), offences
+        ]
+      end
+
       DUMMY_FILE = ::I18nLint::File.new(filepath: "<none>")
 
       JOINER = "\n---\n"
@@ -109,32 +132,9 @@ module I18nLint
         ::I18nLint::Enumerator.new([file.path], source_locale: nil).each_file.first.tap { _1.filepath = filepath }
       end
 
-      def on_file(filepath, contents)
-        rule.on_file(make_file(filepath, contents))
-        offences = rule.take_offences
-        [highlight_offences(contents, offences), offences]
-      end
-
-      def make_segment(text, lineno: nil, locale: nil)
-        ::I18nLint::Segment.new(text:, file: DUMMY_FILE, lineno:, locale:)
-      end
-
-      def on_segment(source, lineno: nil, locale: nil)
-        rule.on_segment(make_segment(source, lineno:, locale:))
-        offences = rule.take_offences
-        [highlight_offences(source, offences), offences]
-      end
-
-      def on_comparison(translation, source, locale: nil, source_locale: nil)
-        rule.on_segment_comparison make_segment(translation, locale:), make_segment(source, locale: source_locale)
-        offences = rule.take_offences
-        [
-          compare_combine(
-            highlight_offences(translation, offences),
-            highlight_offences(source, offences.map(&:source_offence))
-          ),
-          offences
-        ]
+      def make_segment(text, lineno: nil, locale: nil, key: nil, filepath: nil)
+        file = filepath ? ::I18nLint::File.new(filepath:) : DUMMY_FILE
+        ::I18nLint::Segment.new(text:, file:, lineno:, locale:, key:)
       end
     end
   end

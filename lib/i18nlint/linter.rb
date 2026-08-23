@@ -14,7 +14,7 @@ module I18nLint
     end
 
     def num_files
-      @enum.num_files
+      enum.num_files
     end
 
     def tick_each_file(&block)
@@ -51,7 +51,7 @@ module I18nLint
     end
 
     def each_file(&)
-      @enum.each_file do |file|
+      enum.each_file do |file|
         yield file
       rescue Error # coming from a segment?
         raise
@@ -61,7 +61,7 @@ module I18nLint
     end
 
     def each_segment(file: nil, &)
-      @enum.each_segment(file:) do |segment|
+      enum.each_segment(file:) do |segment|
         yield segment
       rescue StandardError => e
         raise ErrorOnSegment.new segment, e
@@ -81,6 +81,8 @@ module I18nLint
     end
 
     private
+
+    attr_reader :enum
 
     def tick(block, num_offences)
       return if block.nil?
