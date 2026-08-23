@@ -39,7 +39,7 @@ module I18nLint
         end
 
         # Compare interpolations against source; anything extra or missing is an offence.
-        on_segment_comparison(
+        def_segment_comparison(
           includes_highlights: true,
           message: lambda do |matches, segment, _source|
             "extra in #{segment.locale}: #{matches.join("; ")}" unless matches.empty?

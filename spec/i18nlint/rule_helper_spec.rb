@@ -32,11 +32,11 @@ RSpec.describe I18nLint::RuleHelper do
     end
   end
 
-  describe "on_segment_comparison" do
+  describe "def_segment_comparison" do
     let(:rule) { Class.new(I18nLint::Rule).tap { _1.include(described_class) }.new }
 
     before do
-      rule.class.on_segment_comparison(
+      rule.class.def_segment_comparison(
         includes_highlights:,
         message: (message if defined? message),
         source_message: (source_message if defined? source_message),

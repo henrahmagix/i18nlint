@@ -43,7 +43,7 @@ module I18nLint
     def self.included(base) = base.extend ClassMethods
 
     module ClassMethods # rubocop:disable Style/Documentation
-      def on_segment_comparison(includes_highlights: false, message: nil, source_message: nil, &process_segment)
+      def def_segment_comparison(includes_highlights: false, message: nil, source_message: nil, &process_segment)
         include EasySegmentComparison
         include includes_highlights ? CompareWithHighlights : CompareNoHighlights
 
