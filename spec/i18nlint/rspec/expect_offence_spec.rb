@@ -20,9 +20,9 @@ RSpec.describe I18nLint::RSpec::ExpectOffence do
   let(:rule) { Class.new(I18nLint::Rule).new }
 
   # Include the test call in the failure backtrace so it can be found just as if the `expect` call were written there.
-  def self.test(description, rule_defs, *inputs, expected) # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
+  def self.test(description, rule_defs, *inputs, expected, spec: :it) # rubocop:disable Metrics/AbcSize,Metrics/MethodLength
     test_locations = caller_locations(1, 2)
-    it description do
+    public_send(spec, description) do
       rule.class.class_eval(rule_defs)
       is_expected = assertion(*inputs)
 
@@ -37,8 +37,11 @@ RSpec.describe I18nLint::RSpec::ExpectOffence do
     end
   end
 
-  def self.passes(desc, defs, *inputs)          = test("passes #{desc}", defs, *inputs, :passes)
-  def self.fails(desc, defs, *inputs, expected) = test("fails #{desc}", defs, *inputs, expected)
+  def self.passes(desc, defs, *inputs, spec: :it)          = test("passes #{desc}", defs, *inputs, :passes, spec:)
+  def self.fails(desc, defs, *inputs, expected, spec: :it) = test("fails #{desc}", defs, *inputs, expected, spec:)
+
+  def self.fpasses(*args) = passes(*args, spec: :fit)
+  def self.ffails(*args) = fails(*args, spec: :fit)
 
   describe "expect_file_offence" do
     def assertion(yaml) = expect { expect_file_offence(yaml, "file.yml") }
