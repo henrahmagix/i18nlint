@@ -5,11 +5,14 @@ module I18nLint
     module BuiltIn
       # Check I18n interpolations like %{key}.
       class Interpolations < Rule
+        enable_by_default true
+
         on_init do
           interpolation_patterns =
             if ::I18n.config.respond_to?(:interpolation_patterns)
               ::I18n.config.interpolation_patterns
             else
+              # This is one union-ed regexp, so we have to split it so we can edit each part individually below.
               ::I18n::INTERPOLATION_PATTERN.source.split(/\|(?=\(\?[-mix]{1,4}:?)/).map do |source|
                 source.match(/\(\?[-mix]{1,4}:?(.*)\)/)[1]
               end

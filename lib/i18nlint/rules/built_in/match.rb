@@ -22,6 +22,7 @@ module I18nLint
       # Report when a Regexp pattern matches against an individual segment.
       class MatchSegment < Rule
         def self.rule_key = "match-segment"
+        enable_by_default true
 
         include MatchPattern
 
@@ -37,6 +38,7 @@ module I18nLint
       # Report when a Regexp pattern matches against an individual segment as compared to itself in the source locale.
       class MismatchToSource < Rule
         def self.rule_key = "mismatch-to-source"
+        enable_by_default true
 
         include MatchPattern
 
@@ -99,6 +101,7 @@ module I18nLint
       # Report when a Regexp pattern matches against a whole I18n file.
       class MatchFile < Rule
         def self.rule_key = "match-file"
+        enable_by_default true
 
         include MatchPattern
 
