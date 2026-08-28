@@ -9,6 +9,6 @@ gem "tzinfo-data", platforms: %i[ mswin mswin64 mingw x64_mingw jruby ]
 group :development, :test do
 end
 
-gem "i18nlint", "~> 0.1.0", path: "../.."
+gem "i18nlint", "~> 1.0.0", path: "../.."
 
 gem "rails-i18n", "~> 8.0"
