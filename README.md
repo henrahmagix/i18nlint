@@ -99,6 +99,92 @@ mismatch-to-source:
   - Pattern: '\[[A-Z_]+\]' # some custom tags used in your renderer like `[NAME]`, `[EMAIL_ADDRESS]`, etc.
 ```
 
+## Custom rules
+
+You can define your own custom rules by defining classes extending `I18nLint::Rule`, and requiring them before I18nLint runs if you're using it in ruby, or linking them under `require:` in the configuration file if you're calling the binary. I18nLint will automatically register all of the subclasses of `I18nLint::Rule` that exist at runtime.
+
+You must define at least one of `on_file`, `on_segment`, or `on_segment_comparison` instance methods. Your rule will get a noop definition for any that is missing.
+- `on_file` receives a `I18nLint::File` that has:
+  - `filepath` string
+  - `parsed` Ruby value of the contents as loaded by I18n
+  - `raw` string contents of the file.
+- `on_segment` receives a `I18nLint::Segment` that has:
+  - `file` (the `I18nLint::File` it's in)
+  - `filepath` delegated to `file.filepath`
+  - `lineno` integer of the start of the segment definition within the file
+  - `key` string of the full segment that you would use in `I18n.t()`
+  - `text` string content of the segment
+  - if `text` is nil, `value` will be the Ruby value of the segment (it could be an array... if you're putting arrays in your I18n 🤷)
+  - `locale` symbol of the segment (or string if i18n gem is < 1.9.1)
+  - `source_locale` string of the project source locale
+  - `source?` true if the locale is the project source
+- `on_segment_comparison` receives two `I18nLint::Segment`s: the first is a translation segment, the second is the same segment in the source locale.
+
+To register an offence, use:
+- for `on_file` call `add_file_offence(file, msg = nil, lineno: nil, source: nil, highlight: nil)` where:
+  - `file` is the input argument to `on_file`
+  - `msg` will be displayed alongside the offence
+  - `lineno` is helpful to pass if the issue is isolated to or starts at a certain line in the file
+  - `source` should be the string on which the offence occurred, if any
+  - `highlight` can be passed as an array of tuples to indicate a range of the file content; if you pass this, you probably don't need to pass the `source`
+- for `on_segment` call `add_segment_offence(segment, msg = nil, highlight: nil)` where:
+  - `segment` is the input argument to `on_segment`
+  - `msg` and `highlight` are the same as above
+- for `on_segment_comparison` call `add_segment_compare_offence(segment, source_segment, msg = nil, src_msg = nil, highlight: nil, source_highlight: nil)` where:
+  - `segment` and `source_segment` are the input arguments to `on_segment_comparison`
+  - `msg` and `highlight` are the same as above
+  - `src_msg` and `source_highlight` are the same but attached to the source segment
+
+If you're using Regexp in your rule, more often than not you can pass `highlight: Regexp.last_match.offset(0)` to the add-offence method.
+
+There is a singleton method `on_init` available to add a block that gets evaluated on the rule instance after initialisation, so you can do some one-time setup of configuration values, available as `config`.
+
+A rule can define a `description` instance or class method to describe the rule. Without it, the class name will be used with `::` replaced by `/`.
+
+A message can be passed in per offence, or it will be taken automatically from a `Message` property on the rule configuration.
+
+### Example
+
+```rb
+# lib/linters/i18n.rb
+module MyI18nRules # the module namespace doesn't matter and is entirely optional
+  class DontAllowHelloAndGoodbyeInSameSentence < I18nLint::Rule
+    def on_segment(segment)
+      segment.text.downcase.scan(/[^.?!]*?[.?!]\s*/) do |sentence|
+        if sentence.include?('hello') && sentence.include?('goodbye')
+          add_segment_offence(segment, 'Thou Shalt Not greet and leave in the same sentence', highlight: Regexp.last_match.offset(0))
+        end
+      end
+    end
+  end
+end
+```
+```yml
+# content.yml
+en:
+  welcome: "One two three. Hello and goodbye! One more finally."
+fr:
+  welcome: "Un deux trois. Bonjour et au revoir! Encore."
+```
+```yml
+# .i18nlint.yml
+require:
+  - ./lib/linters/i18n.rb
+```
+```bash
+$ i18nlint --source=en content.yml
+Inspecting 1 files
+F.
+Comparing segments to source EN
+.
+
+Offences:
+
+content.yml:2 in en.welcome: MyI18nRules/DontAllowHelloAndGoodbyeInSameSentence: Thou Shalt Not greet and leave in the same sentence
+  One two three. Hello and goodbye! One more finally.
+                 ^^^^^^^^^^^^^^^^^^^
+```
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `bundle exec appraisal rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
