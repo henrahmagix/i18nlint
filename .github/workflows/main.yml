@@ -20,6 +20,8 @@ jobs:
           # - '3.4.10'
           - '4.0.6'
 
+    env:
+      BUNDLE_DEPLOYMENT: false
     steps:
       - uses: actions/checkout@v4
       - name: Set up Ruby
