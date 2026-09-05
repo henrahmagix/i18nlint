@@ -28,5 +28,7 @@ jobs:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
           cache-version: 2
+      - name: Setup Appraisals etc.
+        run: bin/setup
       - name: Run the default task
         run: bundle exec appraisal rake
