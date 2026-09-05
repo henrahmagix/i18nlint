@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# rubocop:disable Style/OneClassPerFile
 module I18nLint
   # Parse YAML such that every value is a ValueWithLineNumbers.
   class YamlWithLines
@@ -252,3 +253,4 @@ class Psych::Visitors::ToRubyWithLineNumbers < Psych::Visitors::ToRuby # rubocop
     hash
   end
 end
+# rubocop:enable Style/OneClassPerFile
