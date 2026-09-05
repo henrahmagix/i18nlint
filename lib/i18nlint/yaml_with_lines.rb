@@ -131,15 +131,15 @@ class Psych::TreeWithLineNumbersBuilder < Psych::TreeBuilder # rubocop:disable S
       @levels.pop
     end
 
-    def add_scalar!(val, lineno)
+    def add_scalar!(val, lineno, column)
       if @_last_was_scalar
         @_last_was_scalar = false
-        @keys << [@levels.join("."), lineno]
         return
       end
 
       @_last_was_scalar = true
       @levels[@level] = val
+      @keys << [@levels.join("."), [lineno, column]]
     end
   end
 
@@ -151,7 +151,7 @@ class Psych::TreeWithLineNumbersBuilder < Psych::TreeBuilder # rubocop:disable S
   def duplicate_segments = @_dup_tracker.duplicate_segments
 
   def scalar(*args)
-    @_dup_tracker.add_scalar!(args[0], parser.mark.line + 1)
+    @_dup_tracker.add_scalar!(args[0], parser.mark.line + 1, parser.mark.column)
     node = Psych::Nodes::ScalarWithLineNumber.new(*args, parser.mark.line)
     @last.children << node
     node

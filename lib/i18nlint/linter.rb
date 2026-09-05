@@ -42,7 +42,7 @@ module I18nLint
     def run_comparison
       each_segment_comparison do |segment, source_segment|
         tick(@tick_each_comparison, Registry.rules.sum do |rule|
-          next 0 if rule.excluded?(segment.file.filepath)
+          next 0 if rule.excluded?(segment.filepath)
 
           rule.on_segment_comparison(segment.clone, source_segment.clone)
           rule.take_offences.tap { offences.concat(_1) }.size

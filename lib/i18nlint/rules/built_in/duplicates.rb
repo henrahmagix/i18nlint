@@ -16,9 +16,11 @@ module I18nLint
         end
         attr_reader :keys, :offended_first_occurrence
 
-        def on_segment(segment)
-          check_file_duplicates(segment)
+        def on_file(file)
+          check_hash_key_duplicates_in_same_file(file)
+        end
 
+        def on_segment(segment)
           first_occurrence = recorded_first_occurrence(segment)
           return if first_occurrence == true
 
@@ -37,11 +39,25 @@ module I18nLint
           offended_first_occurrence[segment.locale].delete(segment.key)
         end
 
-        def check_file_duplicates(segment)
-          dupes = YamlWithLines.dupe_segments_by_file.dig(segment.file.filepath, "#{segment.locale}.#{segment.key}")
-          return unless dupes
+        def check_hash_key_duplicates_in_same_file(file)
+          YamlWithLines.dupe_segments_by_file[file.filepath].each_value do |dupes|
+            offence_lineno, offence_column = dupes.last
+            dupes[..-2].each do |(lineno, column)|
+              source, highlight = get_source_highlight_from_parser_mark(file.raw, lineno, column)
+              add_file_offence(file, "will be overwritten by value at line #{offence_lineno} column #{offence_column}",
+                               lineno:, source:, highlight:)
+            end
+          end
+        end
 
-          add_segment_offence(segment, "duplicate of line #{(dupes - [segment.lineno]).join(", ")}")
+        def get_source_highlight_from_parser_mark(string, lineno, column)
+          source = string.match(/\A(?:.*[\r\n]){#{lineno - 1}}(.{#{column}})/)[1]
+          highlight = Regexp.last_match.offset(1)
+          indent = source.match(/^\s*/)[0]
+          source = source.delete_prefix(indent)
+          highlight[0] += indent.length
+
+          [source, highlight]
         end
       end
     end

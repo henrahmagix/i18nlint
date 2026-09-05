@@ -70,15 +70,15 @@ RSpec.describe I18nLint::Rules::BuiltIn::Duplicates do
     expect(run("spec/examples/duplicates/uniq_within_locale_*.yml")).to be_empty
   end
 
-  it "reports offence for duplicate keys within locales; the first occurrence is never skipped" do
-    expect(run("spec/examples/duplicates/duplicate_within_locale*_*.yml")).to contain_exactly(
-      have_attributes(rule: "BuiltIn/Duplicates", key: "a.b.c",
-                      filepath: "spec/examples/duplicates/duplicate_within_locale1_en.yml"),
-      have_attributes(rule: "BuiltIn/Duplicates", key: "a.b.c",
-                      filepath: "spec/examples/duplicates/duplicate_within_locale2_en.yml"),
-      have_attributes(rule: "BuiltIn/Duplicates", key: "a.b.c",
-                      filepath: "spec/examples/duplicates/duplicate_within_locale3_en.yml")
-    )
+  it "reports offence for duplicate keys within locales; the first occurrence is never skipped", :aggregate_failures do
+    offences = run("spec/examples/duplicates/duplicate_within_locale*_*.yml").sort_by(&:filepath)
+    expect(offences[0]).to have_attributes(rule: "BuiltIn/Duplicates", key: "a.b.c",
+                                           filepath: "spec/examples/duplicates/duplicate_within_locale1_en.yml")
+    expect(offences[1]).to have_attributes(rule: "BuiltIn/Duplicates", key: "a.b.c",
+                                           filepath: "spec/examples/duplicates/duplicate_within_locale2_en.yml")
+    expect(offences[2]).to have_attributes(rule: "BuiltIn/Duplicates", key: "a.b.c",
+                                           filepath: "spec/examples/duplicates/duplicate_within_locale3_en.yml")
+
     # TODO: move this test elsewhere, so we can understand how hash merges override keys or not. Our enumerator goes per
     # file so won't override, but I18n merges everything into one store so it will be overriding, I believe.
     expect(linter.send(:enum).each_segment.map { [_1.key, _1.text] }).to contain_exactly(
@@ -91,10 +91,23 @@ RSpec.describe I18nLint::Rules::BuiltIn::Duplicates do
     )
   end
 
-  it "reports offence for duplicate keys in the same file" do
-    expect(run("spec/examples/duplicates/duplicate_same_file_en.yml")).to contain_exactly(
-      have_attributes(rule: "BuiltIn/Duplicates", key: "a.b.c", message: "duplicate of line 4",
-                      filepath: "spec/examples/duplicates/duplicate_same_file_en.yml")
+  it "reports offence for duplicate keys in the same file that YAML parsing overwrites", :aggregate_failures do
+    offences = run("spec/examples/duplicates/duplicate_same_file_en.yml").sort_by(&:key)
+    expect(offences[0]).to have_attributes(
+      rule: "BuiltIn/Duplicates", lineno: 2, message: "will be overwritten by value at line 7 column 4",
+      highlight: [6, 8], text: "a:",
+      filepath: "spec/examples/duplicates/duplicate_same_file_en.yml"
     )
+    expect(offences[1]).to have_attributes(
+      rule: "BuiltIn/Duplicates", lineno: 3, message: "will be overwritten by value at line 8 column 6",
+      highlight: [13, 15], text: "b:",
+      filepath: "spec/examples/duplicates/duplicate_same_file_en.yml"
+    )
+    expect(offences[2]).to have_attributes(
+      rule: "BuiltIn/Duplicates", lineno: 4, message: "will be overwritten by value at line 9 column 8",
+      highlight: [22, 24], text: "c:",
+      filepath: "spec/examples/duplicates/duplicate_same_file_en.yml"
+    )
+    expect(offences.length).to be(3)
   end
 end
