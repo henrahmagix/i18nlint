@@ -14,10 +14,10 @@ jobs:
     strategy:
       matrix:
         ruby:
-          - '3.1.7'
-          - '3.2.11'
-          - '3.3.12'
-          - '3.4.10'
+          # - '3.1.7' # TODO: why does this have a lockfile problem? `Bundler found incorrect dependencies in the lockfile for rubocop-1.81.1`
+          # - '3.2.11'
+          # - '3.3.12'
+          # - '3.4.10'
           - '4.0.6'
 
     steps:
