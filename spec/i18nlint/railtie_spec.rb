@@ -2,7 +2,7 @@
 
 require "support/system_in_dummy_app"
 
-RSpec.describe "railtie" do
+RSpec.describe "railtie", :rails do
   it "takes existing I18n configuration from a Rails app" do
     expect { SystemInDummyApp.system("bin/rails i18nlint") }
       .to output(<<~OUT).to_stdout_from_any_process

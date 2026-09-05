@@ -13,6 +13,7 @@ ORIG_STDERR = $stderr
 
 at_exit { puts <<~MSG }
   VERSIONS:
+    ruby #{RUBY_VERSION}
     i18n #{I18n::VERSION}
     psych #{Psych::VERSION}
 MSG

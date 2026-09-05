@@ -14,7 +14,7 @@ module SystemInDummyApp
 
     def env_for_separate_ruby_process
       # We must unset bundler env so the system call can set its own bundle env as per the dummy app folder.
-      env = ENV.reject { |k, _v| k.match?(/^(BUNDLE|RBENV|GEM_)/) }
+      env = ENV.reject { |k, _v| k.match?(/^(BUNDLE|RBENV)/) }
       env["PATH"] = env["PATH"].split(":").grep_v(%r{/\.rbenv/versions/}).join(":")
 
       rubylib = Regexp.union(env.delete("RUBYLIB").split(":"))
